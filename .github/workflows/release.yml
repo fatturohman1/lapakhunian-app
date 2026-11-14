@@ -1,0 +1,58 @@
+name: Release APK
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # perlu semua tag untuk menghitung versionCode
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore keystore & local.properties dari secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > lapakhunian.keystore
+          cat > local.properties <<EOF
+          RELEASE_STORE_FILE=lapakhunian.keystore
+          RELEASE_STORE_PASSWORD=$STORE_PASS
+          RELEASE_KEY_ALIAS=$KEY_ALIAS
+          RELEASE_KEY_PASSWORD=$KEY_PASS
+          EOF
+
+      - name: Tentukan versi dari tag
+        id: ver
+        run: |
+          VN="${GITHUB_REF_NAME#v}"
+          VC=$(git tag -l 'v*' | wc -l)
+          echo "versionName=$VN" >> "$GITHUB_OUTPUT"
+          echo "versionCode=$VC" >> "$GITHUB_OUTPUT"
+          echo "Rilis: versionName=$VN versionCode=$VC"
+
+      - name: Build release APK (signed)
+        run: ./gradlew assembleRelease -PappVersionName=${{ steps.ver.outputs.versionName }} -PappVersionCode=${{ steps.ver.outputs.versionCode }} --stacktrace
+
+      - name: Buat GitHub Release + upload APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/release/lapakhunian-beta.apk \
+            --title "LapakHunian ${GITHUB_REF_NAME#v}" \
+            --notes "Rilis ${GITHUB_REF_NAME#v}. Unduh lapakhunian-beta.apk — link permanen: releases/latest/download/lapakhunian-beta.apk"

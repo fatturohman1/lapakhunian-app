@@ -29,8 +29,10 @@ android {
         applicationId = "com.lapakhunian.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0-beta.1"
+        // CI release: -PappVersionName=<dari tag> -PappVersionCode=<jumlah tag v*>
+        // tanpa properti → nilai default (build lokal).
+        versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("appVersionName") as String?) ?: "1.0.0-beta.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
