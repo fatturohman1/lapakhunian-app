@@ -51,6 +51,10 @@ git tag v<versi> && git push origin v<versi>
 - Error Google Sign-In dibedakan tipenya di LoginScreen (NoCredential / batal /
   konfigurasi SHA-1). Android OAuth client (SHA-1 debug) + Web client sudah terdaftar
   di Google Cloud project `lapakhunian`.
+- Google Sign-In per-SHA-1 keystore: APK **debug** (SHA-1 05:5A:18:…) dan APK **release**
+  (keystore `lapakhunian.keystore`, SHA-1 F7:FB:6B:60:26:89:7A:CE:ED:20:D9:18:B6:CB:C0:DF:4E:CF:8D:FB)
+  KEDUANYA harus terdaftar sebagai Android OAuth client di GCP. Release APK dari GitHub
+  yang gagal login Google = SHA-1 release belum terdaftar.
 
 ## Catatan fitur penting (konteks singkat)
 - Kontak pembeli TANPA login: `POST /api/properties/{id}/guest-contact` (nama + WA) —
