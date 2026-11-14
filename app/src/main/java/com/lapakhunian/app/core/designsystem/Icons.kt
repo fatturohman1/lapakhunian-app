@@ -1,0 +1,89 @@
+package com.lapakhunian.app.core.designsystem
+
+/**
+ * Pusat icon — nama Phosphor (sinkron preview HTML M0).
+ * Pemakaian: PhPhIcon(AppIcons.Bed) / PhPhIcon(AppIcons.Heart, weight = PhosphorWeight.FILL)
+ */
+object AppIcons {
+    // brand & nav
+    const val Home = "house"
+    const val HomeFilled = "house"
+    const val Search = "magnifying-glass"
+    const val Favorite = "heart"
+    const val Chat = "chat-circle-dots"
+    const val Person = "user"
+
+    // umum
+    const val Back = "arrow-left"
+    const val Close = "x"
+    const val Location = "map-pin"
+    const val Chevron = "caret-right"
+    const val Send = "paper-plane-tilt"
+    const val Sell = "tag"
+    const val CheckCircle = "check-circle"
+    const val Bell = "bell"
+    const val Tune = "sliders-horizontal"
+    const val Share = "share-network"
+    const val Shield = "shield-check"
+    const val Star = "star"
+    const val Info = "info"
+    const val Plus = "plus"
+    const val PlusCircle = "plus-circle"
+    const val Refresh = "arrows-clockwise"
+    const val Trash = "trash"
+    const val Edit = "pencil-simple"
+    const val Logout = "sign-out"
+    const val DoneAll = "checks"
+    const val Dashboard = "squares-four"
+    const val Lock = "lock"
+    const val LockOpen = "lock-open"
+    const val Eye = "eye"
+    const val EyeSlash = "eye-slash"
+    const val Clock = "clock"
+    const val Calendar = "calendar-blank"
+    const val Receipt = "receipt"
+    const val Ticket = "ticket"
+    const val Wallet = "wallet"
+    const val Crown = "crown"
+    const val Gift = "gift"
+    const val Phone = "phone"
+    const val WifiSlash = "wifi-slash"
+    const val WhatsApp = "whatsapp-logo"
+    const val Camera = "camera"
+    const val Image = "image"
+    const val Flag = "flag"
+    const val Play = "play"
+    const val Verified = "seal-check"
+    const val Medal = "medal"
+    const val Gear = "gear"
+    const val Question = "question"
+    const val Calculator = "calculator"
+
+    // spesifikasi properti
+    const val Bed = "bed"
+    const val Bath = "bathtub"
+    const val LandArea = "ruler"
+    const val BuildingArea = "resize"
+    const val Floors = "stack"
+    const val Electricity = "lightning"
+    const val Carport = "car"
+    const val Garage = "warehouse"
+
+    // kategori
+    const val CategoryHouse = "house"
+    const val CategoryApartment = "buildings"
+    const val CategoryOffice = "briefcase"
+    const val CategoryLand = "mountains"
+    const val CategoryCommercial = "city"
+    const val CategoryTownhome = "house-simple"
+    const val CategoryStorefront = "storefront"
+
+    // dashboard
+    const val User = "user"
+    const val Business = "building"
+    const val IdCard = "identification-card"
+    const val Handshake = "handshake"
+    const val Confetti = "confetti"
+    const val Cart = "shopping-cart-simple"
+    const val Upgrade = "crown"
+}

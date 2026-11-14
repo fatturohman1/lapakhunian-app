@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">LapakHunian</string>
+    <string name="nav_home">Beranda</string>
+    <string name="nav_explore">Jelajah</string>
+    <string name="nav_favorites">Favorit</string>
+    <string name="nav_chat">Chat</string>
+    <string name="nav_profile">Profil</string>
+</resources>

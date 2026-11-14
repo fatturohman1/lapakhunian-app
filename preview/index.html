@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LapakHunian — Preview Simulasi Android</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;400;500;600;700;800" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+/* ============ TOKENS — modern minimalist ============ */
+:root{
+  --primary:#15a851; --primary-dark:#006d31; --surface:#f6f8fc;
+  --tint:#e7f7ee; --tint-deep:#d3f0df;
+  --error:#ba1a1a; --ink:#101828; --muted:#6b7688; --line:#eef1f6;
+  --card:#ffffff; --amber:#b45309; --amber-bg:#fef3c7;
+  --blue:#1d4ed8; --blue-bg:#dbeafe;
+  --ok:#15803d; --ok-bg:#dcfce7;
+  --red-bg:#fee2e2; --gray-bg:#eef1f6;
+  --radius:20px; --radius-sm:16px;
+  --shadow:0 2px 10px rgba(23,32,49,.05),0 1px 3px rgba(23,32,49,.04);
+  --shadow-lg:0 14px 34px rgba(13,84,44,.16);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:'League Spartan',system-ui,sans-serif; background:#171c23; color:var(--ink);
+  display:flex; flex-direction:column; align-items:center; padding:20px 16px 40px; gap:16px;
+}
+.ms{font-size:22px; line-height:1; user-select:none; font-style:normal; font-weight:normal;
+  display:inline-flex; align-items:center; justify-content:center}
+
+/* ============ TOPBAR + TABS ============ */
+.topbar{width:100%; max-width:1060px; display:flex; flex-direction:column; gap:10px}
+.brandrow{display:flex; align-items:center; gap:12px; color:#fff}
+.logo{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#1cb45c,#0f9c4b);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 16px rgba(21,168,81,.35)}
+.logo .ms{font-size:20px}
+.brandrow h1{font-size:18px; font-weight:700; letter-spacing:.2px}
+.brandrow span{font-size:12px;color:#9aa4b2;font-weight:400}
+.tabs{display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:4px; scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab-label{color:#8a94a6; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; align-self:center; margin-right:2px; white-space:nowrap}
+.tab{border:1px solid #2b3340; background:#1d232b; color:#c6ceda; font-family:inherit; font-size:13px;
+  font-weight:600; padding:7px 14px; border-radius:99px; cursor:pointer; white-space:nowrap; transition:.15s}
+.tab:hover{border-color:var(--primary)}
+.tab.active{background:var(--primary); border-color:var(--primary); color:#fff}
+
+/* ============ STAGE ============ */
+.stage{display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; justify-content:center}
+.phone{
+  width:390px; height:812px; background:var(--surface); border-radius:44px;
+  border:12px solid #10151b; position:relative; overflow:hidden; flex-shrink:0;
+  box-shadow:0 30px 70px rgba(0,0,0,.55);
+}
+.statusbar{height:36px; display:flex; justify-content:space-between; align-items:center;
+  padding:0 24px; font-size:13px; font-weight:700; background:transparent; position:relative; z-index:5}
+.statusbar .right{display:flex; gap:6px; align-items:center}
+.statusbar .ms{font-size:15px}
+
+/* screens */
+.screen{position:absolute; inset:36px 0 0 0; display:none; flex-direction:column; overflow:hidden}
+.screen.active{display:flex}
+.scroll{flex:1; overflow-y:auto; scrollbar-width:none; padding-bottom:104px}
+.scroll.nonav{padding-bottom:0}
+.scroll::-webkit-scrollbar{display:none}
+
+/* app bar */
+.appbar{display:flex; align-items:center; gap:12px; padding:10px 20px; background:transparent; position:relative; z-index:4}
+.appbar .back{width:38px;height:38px;border-radius:50%;background:#fff;border:none;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.appbar .back .ms{font-size:20px}
+.appbar h2{font-size:20px; font-weight:800; flex:1; letter-spacing:-.2px}
+.appbar .act{position:relative; cursor:pointer; width:38px; height:38px; border-radius:50%; background:#fff; box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center}
+.appbar .act .ms{font-size:20px}
+.dot{position:absolute; top:7px; right:8px; width:8px; height:8px; background:var(--error); border-radius:50%; border:2px solid #fff}
+
+/* bottom nav — M3 style */
+.bottomnav{position:absolute; bottom:0; left:0; right:0; height:86px; background:#fff;
+  box-shadow:0 -10px 30px rgba(16,24,40,.07); border-radius:24px 24px 0 0;
+  display:none; padding:10px 6px 20px; z-index:6}
+.bottomnav.show{display:flex}
+.bn-item{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; color:#95a0b2; font-size:11px; font-weight:700; cursor:pointer; position:relative; transition:.15s}
+.bn-item .ms{font-size:24px; padding:5px 20px; border-radius:99px; transition:.18s}
+.bn-item.active{color:var(--primary-dark)}
+.bn-item.active .ms{background:var(--tint); color:var(--primary-dark); font-variation-settings:'FILL' 1}
+.bn-item .bdg{position:absolute; top:-3px; left:calc(50% + 10px); min-width:17px; height:17px; background:var(--error); color:#fff; font-size:10px; border-radius:99px; display:flex; align-items:center; justify-content:center; padding:0 4px; border:2px solid #fff}
+
+/* buttons */
+.btn{display:flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; font-weight:700;
+  border:none; border-radius:99px; padding:15px 22px; font-size:15px; cursor:pointer; transition:.18s}
+.btn .ms{font-size:20px}
+.btn-primary{background:linear-gradient(135deg,#1cb45c,#0f9c4b); color:#fff; box-shadow:0 8px 20px rgba(21,168,81,.30)}
+.btn-primary:hover{filter:brightness(.96)}
+.btn-outline{background:var(--tint); color:var(--primary-dark); border:none}
+.btn-ghost{background:#eef2f7; color:var(--ink); border:none}
+.btn-block{width:100%}
+.btn-sm{padding:9px 16px; font-size:13px}
+.btn-dark{background:#101828;color:#fff}
+
+/* chips */
+.chip{display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:99px; background:#fff;
+  border:none; box-shadow:var(--shadow); font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; transition:.15s; user-select:none}
+.chip .ms{font-size:17px}
+.chip.on{background:linear-gradient(135deg,#1cb45c,#0f9c4b); color:#fff; box-shadow:0 6px 14px rgba(21,168,81,.28)}
+.chip.static{cursor:default}
+
+/* cards */
+.card{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow)}
+
+/* property card */
+.prop-img{position:relative; height:160px; border-radius:18px; display:flex; align-items:center; justify-content:center; color:#fff; overflow:hidden}
+.prop-img .ms{font-size:46px; opacity:.9; filter:drop-shadow(0 4px 10px rgba(0,0,0,.15))}
+.prop-img .heart{position:absolute; top:12px; right:12px; width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--ink);cursor:pointer}
+.prop-img .heart .ms{font-size:19px}
+.prop-img .heart.on .ms{color:var(--error); font-variation-settings:'FILL' 1}
+.g1{background:linear-gradient(140deg,#6ee7b7,#10b981)}
+.g2{background:linear-gradient(140deg,#93c5fd,#3b82f6)}
+.g3{background:linear-gradient(140deg,#fcd34d,#f59e0b)}
+.g4{background:linear-gradient(140deg,#f9a8d4,#ec4899)}
+.g5{background:linear-gradient(140deg,#c4b5fd,#8b5cf6)}
+.g6{background:linear-gradient(140deg,#5eead4,#14b8a6)}
+.imgbadge{position:absolute; top:12px; left:12px; background:rgba(255,255,255,.94); color:var(--primary-dark);
+  font-size:10.5px; font-weight:800; padding:5px 11px; border-radius:99px; letter-spacing:.5px; box-shadow:var(--shadow)}
+.imgcount{position:absolute; bottom:12px; right:12px; background:rgba(13,20,30,.55); backdrop-filter:blur(4px); color:#fff; font-size:11px; font-weight:600; padding:4px 10px; border-radius:99px; display:flex; align-items:center; gap:4px}
+.imgcount .ms{font-size:14px}
+.prop-body{padding:13px 16px 16px}
+.prop-body h3{font-size:15.5px; font-weight:700; line-height:1.3; letter-spacing:-.1px}
+.prop-loc{display:flex; align-items:center; gap:4px; color:var(--muted); font-size:12.5px; margin-top:4px}
+.prop-loc .ms{font-size:15px}
+.prop-price{color:var(--primary-dark); font-weight:800; font-size:16.5px; margin-top:8px; letter-spacing:-.2px}
+.prop-specs{display:flex; gap:12px; margin-top:7px; color:var(--muted); font-size:12px; font-weight:600; flex-wrap:wrap}
+.prop-specs span{display:flex; align-items:center; gap:4px}
+.prop-specs .ms{font-size:15px}
+
+/* badges */
+.badge{display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:800; letter-spacing:.5px; padding:5px 11px; border-radius:99px; text-transform:uppercase}
+.b-approved{background:var(--ok-bg); color:var(--ok)}
+.b-pending{background:var(--amber-bg); color:var(--amber)}
+.b-rejected{background:var(--red-bg); color:var(--error)}
+.b-expired{background:var(--gray-bg); color:var(--muted)}
+.b-sold{background:var(--blue-bg); color:var(--blue)}
+.b-pro{background:linear-gradient(135deg,#1cb45c,#0f9c4b); color:#fff; box-shadow:0 3px 8px rgba(21,168,81,.3)}
+
+/* section */
+.section{padding:0 20px; margin-top:24px}
+.sechead{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:13px}
+.sechead h3{font-size:17.5px; font-weight:800; letter-spacing:-.2px}
+.sechead a{color:var(--primary-dark); font-size:12.5px; font-weight:700; cursor:pointer}
+
+/* search pill */
+.searchbar{display:flex; align-items:center; gap:10px; background:#fff;
+  border-radius:99px; padding:10px 10px 10px 20px; margin:6px 20px 0; box-shadow:0 8px 24px rgba(16,24,40,.09); cursor:pointer}
+.searchbar .ms{color:var(--muted); font-size:21px}
+.searchbar span{color:var(--muted); font-size:14px; flex:1}
+.searchbar input{border:none; background:transparent; outline:none; flex:1; font-family:inherit; font-size:14px; color:var(--ink)}
+.tune-btn{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#1cb45c,#0f9c4b);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(21,168,81,.3);flex-shrink:0}
+
+/* category grid */
+.catgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.cat{background:#fff; border:none; border-radius:var(--radius-sm); padding:14px 6px; display:flex; flex-direction:column; align-items:center; gap:8px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:var(--shadow)}
+.cat .ms{font-size:24px; color:var(--primary-dark); background:var(--tint); border-radius:14px; padding:10px}
+
+/* city grid */
+.citygrid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+.city{position:relative; height:80px; border-radius:18px; display:flex; align-items:flex-end; padding:12px 14px; color:#fff; font-weight:800; font-size:15px; cursor:pointer; overflow:hidden; box-shadow:var(--shadow)}
+.city small{position:absolute; top:10px; right:12px; font-size:10.5px; font-weight:700; opacity:.9}
+.city::after{content:""; position:absolute; inset:auto 0 0 0; height:46px; background:linear-gradient(transparent,rgba(10,25,18,.28))}
+
+/* carousel */
+.carousel{display:flex; gap:12px; overflow-x:auto; padding:0 20px; scrollbar-width:none; scroll-snap-type:x mandatory}
+.carousel::-webkit-scrollbar{display:none}
+.carousel .pcard{min-width:272px; scroll-snap-align:start}
+
+/* list card */
+.listcard{display:flex; gap:13px; background:#fff; border:none; border-radius:18px; padding:12px; box-shadow:var(--shadow); cursor:pointer}
+.listcard .thumb{width:94px; height:94px; border-radius:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; position:relative}
+.listcard .thumb .ms{font-size:30px; opacity:.92}
+.listcard h4{font-size:14px; font-weight:700; line-height:1.3; letter-spacing:-.1px}
+.listcard .meta{font-size:11.5px; color:var(--muted); margin-top:2px; display:flex; align-items:center; gap:3px}
+.listcard .meta .ms{font-size:13px}
+.listcard .price{color:var(--primary-dark); font-weight:800; font-size:14px; margin-top:4px; letter-spacing:-.2px}
+.stack{display:flex; flex-direction:column; gap:12px; padding:0 20px; margin-top:14px}
+
+/* ============ FORMS ============ */
+.field{margin-top:16px}
+.field label{font-size:12.5px; font-weight:700; color:var(--ink); display:block; margin-bottom:7px}
+.field label small{color:var(--muted); font-weight:500}
+.input, textarea.input{width:100%; border:1.5px solid transparent; border-radius:14px; padding:14px 16px;
+  font-family:inherit; font-size:14.5px; background:#f0f3f9; color:var(--ink); outline:none; transition:.15s}
+.input:focus{background:#fff; border-color:var(--primary); box-shadow:0 0 0 4px rgba(21,168,81,.10)}
+textarea.input{resize:none; min-height:96px}
+.select{appearance:none}
+.seg{display:flex; background:#eef2f7; border-radius:99px; padding:4px; gap:4px}
+.seg button{flex:1; border:none; background:transparent; font-family:inherit; font-size:13px; font-weight:700; color:var(--muted); padding:10px; border-radius:99px; cursor:pointer; transition:.15s}
+.seg button.on{background:#fff; color:var(--primary-dark); box-shadow:var(--shadow)}
+.timeline-chips{display:flex; gap:8px; flex-wrap:wrap}
+.range{width:100%; accent-color:var(--primary); margin-top:6px}
+.range-labels{display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); font-weight:600; margin-top:4px}
+
+/* onboarding */
+.ob-wrap{flex:1; display:flex; flex-direction:column; padding:26px 28px 34px}
+.ob-art{flex:1; border-radius:32px; display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:var(--shadow-lg)}
+.ob-art .ms{font-size:100px; opacity:.92; filter:drop-shadow(0 10px 22px rgba(0,0,0,.18))}
+.ob-dots{display:flex; gap:7px; justify-content:center; margin:28px 0 18px}
+.ob-dots i{width:8px; height:8px; border-radius:99px; background:#d4dae4; transition:.2s}
+.ob-dots i.on{width:28px; background:var(--primary)}
+.ob-wrap h2{font-size:26px; font-weight:800; line-height:1.2; text-align:center; letter-spacing:-.4px}
+.ob-wrap p{color:var(--muted); text-align:center; font-size:14.5px; margin-top:12px; line-height:1.5}
+
+/* auth */
+.auth-logo{display:flex; flex-direction:column; align-items:center; gap:12px; margin:30px 0 10px}
+.auth-logo .mark{width:62px; height:62px; border-radius:20px; background:linear-gradient(135deg,#1cb45c,#0f9c4b); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-lg)}
+.auth-logo .mark .ms{font-size:32px}
+.auth-logo h2{font-size:23px; font-weight:800; letter-spacing:-.3px}
+.auth-logo p{color:var(--muted); font-size:13.5px}
+.divider{display:flex; align-items:center; gap:12px; color:var(--muted); font-size:12px; font-weight:600; margin:18px 0}
+.divider::before,.divider::after{content:""; flex:1; height:1px; background:#e5eaf1}
+.role-pick{display:flex; gap:10px}
+.role-card{flex:1; border:none; background:#f0f3f9; border-radius:16px; padding:16px; display:flex; flex-direction:column; align-items:center; gap:7px; font-size:13px; font-weight:700; cursor:pointer; transition:.15s}
+.role-card .ms{font-size:26px; color:var(--muted)}
+.role-card.on{background:var(--tint); box-shadow:0 0 0 2px var(--primary) inset}
+.role-card.on .ms{color:var(--primary-dark)}
+.note{display:flex; gap:9px; background:#fff8e6; color:#92400e; font-size:12.5px; line-height:1.45; padding:12px 14px; border-radius:14px; margin-top:16px}
+.note .ms{font-size:17px; flex-shrink:0}
+
+/* detail */
+.pager{position:relative; height:290px; display:flex; align-items:center; justify-content:center; color:#fff}
+.pager > .ms{font-size:72px; opacity:.92; filter:drop-shadow(0 8px 18px rgba(0,0,0,.18))}
+.pager .pager-nav .ms{font-size:18px; color:var(--ink)}
+.pager .appbar .back .ms{color:var(--ink)}
+.pager .appbar .act .ms{color:var(--ink)}
+.pager .pager-nav{position:absolute; bottom:16px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.9); box-shadow:var(--shadow); display:flex; align-items:center; justify-content:center; cursor:pointer}
+.pager .pager-nav.l{left:16px} .pager .pager-nav.r{right:16px}
+.detail-body{padding:20px 20px 0}
+.detail-body h2{font-size:21px; font-weight:800; line-height:1.25; letter-spacing:-.3px}
+.detail-price{font-size:23px; color:var(--primary-dark); font-weight:800; margin-top:9px; letter-spacing:-.3px}
+.tagrow{display:flex; gap:8px; margin-top:13px; flex-wrap:wrap}
+.tag{background:#eef2f7; color:var(--muted); font-size:12px; font-weight:700; padding:7px 13px; border-radius:99px}
+.specgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:16px}
+.spec{background:#fff; border:none; border-radius:16px; padding:12px 4px; display:flex; flex-direction:column; align-items:center; gap:6px; box-shadow:var(--shadow)}
+.spec .ms{font-size:20px; color:var(--primary-dark); background:var(--tint); border-radius:12px; padding:7px}
+.spec b{font-size:13.5px}
+.spec span{font-size:10px; color:var(--muted); font-weight:600}
+.desc{color:var(--muted); font-size:13.5px; line-height:1.6; margin-top:10px}
+.map-ph{height:150px; border-radius:18px; background:linear-gradient(140deg,#dfe9f6,#cfdff0); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:#33506e; font-size:12.5px; font-weight:600; box-shadow:var(--shadow)}
+.map-ph .ms{font-size:30px}
+.agent-card{display:flex; gap:13px; align-items:center; background:#fff; border:none; border-radius:18px; padding:15px; box-shadow:var(--shadow)}
+.avatar{width:48px; height:48px; border-radius:50%; background:var(--tint); color:var(--primary-dark); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; flex-shrink:0}
+.avatar.lg{width:56px; height:56px; font-size:18px}
+.agent-card h4{font-size:14.5px; font-weight:800; display:flex; align-items:center; gap:6px; flex-wrap:wrap; letter-spacing:-.1px}
+.agent-card .sub{font-size:12px; color:var(--muted); margin-top:3px; display:flex; align-items:center; gap:4px}
+.agent-card .sub .ms{font-size:14px; color:#f59e0b}
+.sticky-cta{position:absolute; bottom:0; left:0; right:0; background:#fff; border-radius:24px 24px 0 0;
+  box-shadow:0 -12px 34px rgba(16,24,40,.10); padding:14px 20px 22px; display:flex; align-items:center; gap:14px; z-index:7}
+.sticky-cta .p{flex:1}
+.sticky-cta .p b{font-size:17px; color:var(--primary-dark); display:block; letter-spacing:-.2px}
+.sticky-cta .p span{font-size:11px; color:var(--muted); font-weight:600}
+.sticky-cta .btn{padding:14px 24px}
+
+/* chat */
+.chatlist-item{display:flex; gap:13px; padding:15px 20px; border-bottom:1px solid #f1f4f8; background:#fff; cursor:pointer; align-items:center}
+.chatlist-item .avatar{width:46px; height:46px}
+.chatlist-item .mid{flex:1; min-width:0}
+.chatlist-item h4{font-size:14px; font-weight:700; display:flex; justify-content:space-between; letter-spacing:-.1px}
+.chatlist-item h4 time{font-size:11px; color:var(--muted); font-weight:600}
+.chatlist-item p{font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px}
+.chatlist-item .prop-tag{display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; color:var(--primary-dark); background:var(--tint); padding:4px 10px; border-radius:99px; margin-top:6px}
+.chatlist-item .prop-tag .ms{font-size:13px}
+.unread-pill{min-width:20px; height:20px; border-radius:99px; background:var(--primary); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; padding:0 6px}
+.thread{flex:1; overflow-y:auto; background:var(--surface); padding:16px 16px 8px; scrollbar-width:none; display:flex; flex-direction:column; gap:9px}
+.thread::-webkit-scrollbar{display:none}
+.bubble{max-width:78%; padding:11px 16px; border-radius:20px; font-size:13.5px; line-height:1.45; box-shadow:var(--shadow)}
+.bubble.me{align-self:flex-end; background:linear-gradient(135deg,#1cb45c,#0f9c4b); color:#fff; border-bottom-right-radius:6px}
+.bubble.them{align-self:flex-start; background:#fff; border-bottom-left-radius:6px}
+.bubble time{display:block; font-size:10px; opacity:.75; margin-top:5px; text-align:right; font-weight:600}
+.daysep{align-self:center; background:#e8edf4; color:var(--muted); font-size:11px; font-weight:700; padding:5px 14px; border-radius:99px}
+.inputbar{display:flex; gap:10px; padding:12px 18px 24px; background:#fff; align-items:center}
+.inputbar input{flex:1; border:1.5px solid transparent; background:#f0f3f9; border-radius:99px; padding:13px 18px; font-family:inherit; font-size:14px; outline:none; transition:.15s}
+.inputbar input:focus{background:#fff; border-color:var(--primary)}
+.inputbar .send{width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,#1cb45c,#0f9c4b); color:#fff; display:flex; align-items:center; justify-content:center; border:none; cursor:pointer; box-shadow:0 6px 16px rgba(21,168,81,.3)}
+.blurbox{background:#fff; border-radius:20px; padding:18px; display:flex; flex-direction:column; gap:13px; align-items:center; margin-top:16px; box-shadow:var(--shadow)}
+.blurtext{filter:blur(6px); color:var(--muted); font-size:13px; line-height:1.5; user-select:none}
+
+/* dashboard */
+.dash-head{padding:14px 20px 0; display:flex; flex-direction:column; gap:14px}
+.statrow{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.stat{background:#fff; border:none; border-radius:16px; padding:14px 8px; text-align:center; box-shadow:var(--shadow)}
+.stat b{font-size:20px; display:block; letter-spacing:-.3px}
+.stat span{font-size:11px; color:var(--muted); font-weight:600}
+.prop-item{display:flex; gap:13px; background:#fff; border:none; border-radius:18px; padding:12px; box-shadow:var(--shadow)}
+.prop-item .thumb{width:80px; height:80px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0}
+.prop-item .thumb .ms{font-size:27px; opacity:.92}
+.prop-item h4{font-size:13.5px; font-weight:700; line-height:1.3; letter-spacing:-.1px}
+.prop-item .badge{margin-top:6px}
+.prop-item .views{font-size:11px; color:var(--muted); font-weight:600; margin-top:6px; display:flex; gap:10px}
+.prop-item .views span{display:flex; align-items:center; gap:3px}
+.prop-item .views .ms{font-size:13px}
+.prop-actions{display:flex; gap:7px; margin-top:9px; flex-wrap:wrap}
+.mini-btn{border:none; background:#f0f3f9; border-radius:99px; font-family:inherit; font-size:11.5px; font-weight:700; padding:8px 13px; cursor:pointer; display:flex; align-items:center; gap:4px; color:var(--ink); transition:.15s}
+.mini-btn .ms{font-size:14px}
+.mini-btn.green{color:var(--primary-dark); background:var(--tint)}
+.mini-btn.red{color:var(--error); background:var(--red-bg)}
+.fab{position:absolute; bottom:100px; right:20px; background:linear-gradient(135deg,#1cb45c,#0f9c4b); color:#fff; border-radius:99px; padding:15px 22px;
+  font-weight:700; font-size:13.5px; display:flex; align-items:center; gap:8px; box-shadow:var(--shadow-lg); cursor:pointer; z-index:8}
+.fab .ms{font-size:19px}
+
+/* wizard */
+.wiz-steps{display:flex; align-items:center; padding:8px 22px 0; gap:8px}
+.wiz-step{flex:1; display:flex; flex-direction:column; gap:7px}
+.wiz-step i{height:5px; border-radius:99px; background:#e2e7ef; display:block}
+.wiz-step.done i,.wiz-step.on i{background:linear-gradient(90deg,#1cb45c,#0f9c4b)}
+.wiz-step span{font-size:10.5px; font-weight:700; color:var(--muted)}
+.wiz-step.on span{color:var(--primary-dark)}
+.photo-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.ph-tile{aspect-ratio:1; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#fff; position:relative; box-shadow:var(--shadow)}
+.ph-tile .ms{font-size:26px}
+.ph-tile.add{border:2px dashed #c8d2e0; background:#fff; color:var(--muted); cursor:pointer; box-shadow:none}
+.ph-tile.add .ms{color:var(--muted)}
+.ph-tile .del{position:absolute; top:6px; right:6px; width:24px; height:24px; background:rgba(13,20,30,.55); backdrop-filter:blur(3px); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center}
+.ph-tile .del .ms{font-size:13px}
+.price-preview{background:var(--tint); border-radius:16px; padding:16px}
+.price-preview b{color:var(--primary-dark); font-size:18px}
+
+/* plan cards */
+.plan{background:#fff; border:none; border-radius:var(--radius); padding:20px 18px; position:relative; box-shadow:var(--shadow)}
+.plan.hot{box-shadow:0 0 0 2px var(--primary), var(--shadow-lg)}
+.plan .pop{position:absolute; top:-11px; right:16px; background:linear-gradient(135deg,#1cb45c,#0f9c4b); color:#fff; font-size:10px; font-weight:800; letter-spacing:.5px; padding:5px 12px; border-radius:99px; box-shadow:0 4px 10px rgba(21,168,81,.3)}
+.plan h3{font-size:16.5px; font-weight:800}
+.plan .pr{font-size:22px; font-weight:800; color:var(--primary-dark); margin-top:5px; letter-spacing:-.3px}
+.plan .pr small{font-size:12px; color:var(--muted); font-weight:600}
+.plan ul{list-style:none; margin-top:14px; display:flex; flex-direction:column; gap:8px}
+.plan li{display:flex; gap:9px; align-items:center; font-size:12.5px; color:var(--ink); font-weight:500}
+.plan li .ms{font-size:16px; color:var(--primary)}
+.plan .btn{margin-top:16px}
+.plan .cur-tag{display:inline-block; background:var(--ok-bg); color:var(--ok); font-size:10.5px; font-weight:800; padding:4px 10px; border-radius:99px; margin-top:6px}
+
+/* leads */
+.lead-card{background:#fff; border:none; border-radius:18px; padding:15px; box-shadow:var(--shadow)}
+.lead-card .top{display:flex; justify-content:space-between; align-items:center}
+.lead-card h4{font-size:14px; font-weight:800; letter-spacing:-.1px}
+.lead-card .prop-ref{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted); font-weight:600; margin-top:4px}
+.lead-card .prop-ref .ms{font-size:14px}
+.lead-contact{background:#f0f3f9; border-radius:14px; padding:12px 14px; margin-top:12px; font-size:12.5px; display:flex; flex-direction:column; gap:6px}
+.lead-contact div{display:flex; align-items:center; gap:7px; color:var(--ink); font-weight:600}
+.lead-contact .ms{font-size:15px; color:var(--muted)}
+.balance-card{margin:0 20px; margin-top:14px; border-radius:22px; padding:20px 18px; color:#fff; display:flex; justify-content:space-between; align-items:center;
+  background:linear-gradient(135deg,#0c8a44,#18b35b); box-shadow:var(--shadow-lg); position:relative; overflow:hidden}
+.balance-card::after{content:""; position:absolute; width:140px; height:140px; border-radius:50%; background:rgba(255,255,255,.12); top:-50px; right:-30px}
+.balance-card b{font-size:27px; display:block; letter-spacing:-.3px; position:relative}
+.balance-card span{font-size:11.5px; opacity:.9; font-weight:700; letter-spacing:.6px; position:relative}
+.balance-card .mini-btn{border:none; position:relative}
+.qa-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:9px; padding:0 20px; margin-top:14px}
+.qa{background:#fff; border:none; border-radius:16px; padding:13px 4px; display:flex; flex-direction:column; align-items:center; gap:7px; font-size:10.5px; font-weight:700; color:var(--ink); cursor:pointer; text-align:center; box-shadow:var(--shadow)}
+.qa .ms{font-size:22px; color:var(--primary-dark); background:var(--tint); border-radius:12px; padding:8px}
+
+/* misc rows */
+.menu-item{display:flex; align-items:center; gap:14px; padding:14px 18px; border-bottom:1px solid #f1f4f8; cursor:pointer; background:#fff}
+.menu-item:last-child{border-bottom:none}
+.menu-item .ms:first-child{color:var(--primary-dark); background:var(--tint); border-radius:13px; padding:9px; font-size:21px; font-variation-settings:'FILL' 1}
+.menu-item span{flex:1; font-size:14.5px; font-weight:600}
+.menu-item .ms.chev{font-size:20px; color:#c3cad6; background:transparent; padding:0}
+.menu-item .tag-right{font-size:11px; color:var(--muted); font-weight:700}
+.notif-item{display:flex; gap:13px; padding:16px 20px; border-bottom:1px solid #f1f4f8; background:#fff}
+.notif-item .ic{width:42px; height:42px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0}
+.notif-item .ic .ms{font-size:20px; font-variation-settings:'FILL' 1}
+.ic-green{background:var(--tint); color:var(--primary-dark)}
+.ic-blue{background:var(--blue-bg); color:var(--blue)}
+.ic-amber{background:var(--amber-bg); color:var(--amber)}
+.ic-red{background:var(--red-bg); color:var(--error)}
+.notif-item h4{font-size:13.5px; font-weight:700; letter-spacing:-.1px}
+.notif-item p{font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.45}
+.notif-item time{font-size:11px; color:var(--muted); font-weight:600; white-space:nowrap}
+.notif-item .unread{width:8px; height:8px; background:var(--primary); border-radius:50%; flex-shrink:0; margin-top:7px}
+.tx-item{display:flex; align-items:center; gap:13px; padding:15px 20px; border-bottom:1px solid #f1f4f8; background:#fff}
+.tx-item .mid{flex:1}
+.tx-item h4{font-size:13.5px; font-weight:700; letter-spacing:-.1px}
+.tx-item p{font-size:11.5px; color:var(--muted); margin-top:3px}
+.tx-item .amt{font-weight:800; font-size:13.5px; text-align:right}
+.voucher{margin:0 20px 14px; border-radius:var(--radius); padding:18px; color:#fff; position:relative; overflow:hidden; box-shadow:var(--shadow-lg)}
+.voucher::after{content:""; position:absolute; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,.14); top:-40px; right:-24px}
+.voucher h3{font-size:16px; font-weight:800; position:relative}
+.voucher p{font-size:12.5px; opacity:.92; margin-top:5px; position:relative}
+.voucher .code{display:inline-block; background:rgba(255,255,255,.22); border:1px dashed rgba(255,255,255,.65); padding:6px 14px; border-radius:99px; font-weight:800; letter-spacing:1.5px; font-size:13px; margin-top:12px; position:relative}
+.voucher .btn{position:relative}
+
+/* profile */
+.prof-head{display:flex; align-items:center; gap:15px; padding:20px 20px 8px}
+.prof-head h3{font-size:18px; font-weight:800; letter-spacing:-.2px}
+.prof-head p{font-size:12.5px; color:var(--muted); margin-top:3px}
+.menu-group{margin-top:16px; border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); background:#fff}
+
+/* filter sheet */
+.overlay{position:absolute; inset:0; background:rgba(10,14,20,.5); opacity:0; pointer-events:none; transition:.25s; z-index:20}
+.overlay.open{opacity:1; pointer-events:auto}
+.sheet{position:absolute; left:0; right:0; bottom:0; background:#fff; border-radius:28px 28px 0 0; z-index:21;
+  transform:translateY(105%); transition:.3s cubic-bezier(.2,.8,.25,1); padding:10px 24px 28px; max-height:80%; overflow-y:auto; scrollbar-width:none}
+.sheet.open{transform:translateY(0)}
+.sheet-grab{width:44px; height:5px; background:#e2e7ef; border-radius:99px; margin:8px auto 16px}
+.sheet h3{font-size:18px; font-weight:800; letter-spacing:-.2px; margin-bottom:12px}
+.sheet .fgroup{margin-top:18px}
+.sheet .fgroup > label{font-size:12.5px; font-weight:700; display:block; margin-bottom:9px}
+.chiprow{display:flex; gap:8px; flex-wrap:wrap}
+
+/* toast */
+.toast{position:absolute; bottom:100px; left:50%; transform:translate(-50%,20px); background:#0f1d2f; color:#fff;
+  font-size:13px; font-weight:600; padding:12px 20px; border-radius:99px; opacity:0; transition:.3s; z-index:30;
+  display:flex; align-items:center; gap:8px; max-width:88%; text-align:center; pointer-events:none; box-shadow:0 12px 30px rgba(0,0,0,.3)}
+.toast .ms{font-size:17px; color:#4ade80}
+.toast.show{opacity:1; transform:translate(-50%,0)}
+
+/* side panel */
+.panel{width:300px; color:#c6ceda; display:flex; flex-direction:column; gap:12px}
+.panel .cardp{background:#1d232b; border:1px solid #2b3340; border-radius:16px; padding:16px}
+.panel h3{color:#fff; font-size:15px; font-weight:700; display:flex; gap:8px; align-items:center}
+.panel h3 .ms{color:#2fd574}
+.panel .scr-name{font-size:13px; color:#9aa4b2; margin-top:8px}
+.panel .scr-name b{color:#fff}
+.panel .api{font-family:ui-monospace,Consolas,monospace; font-size:11.5px; background:#12161c; border:1px solid #2b3340;
+  border-radius:10px; padding:10px 12px; margin-top:10px; color:#7ee2a8; line-height:1.5; word-break:break-word}
+.panel ul{margin:10px 0 0 16px; font-size:12.5px; color:#9aa4b2; line-height:1.7}
+@media (max-width:1100px){ .panel{width:100%; max-width:390px} }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brandrow">
+    <div class="logo"><i class="ms ph-fill ph-house-line"></i></div>
+    <h1>LapakHunian — Preview Android</h1>
+    <span>Simulasi M0 · gaya modern minimalis · klik layar di bawah</span>
+  </div>
+  <nav class="tabs" id="tabs">
+    <span class="tab-label">Awal</span>
+    <button class="tab active" data-scr="scr-onboard">Onboarding</button>
+    <button class="tab" data-scr="scr-login">Login</button>
+    <button class="tab" data-scr="scr-register">Register</button>
+    <span class="tab-label">Buyer</span>
+    <button class="tab" data-scr="scr-home">Home</button>
+    <button class="tab" data-scr="scr-explore">Explore</button>
+    <button class="tab" data-scr="scr-detail">Detail</button>
+    <button class="tab" data-scr="scr-contact">Hubungi Agen</button>
+    <button class="tab" data-scr="scr-chat-list">Chat</button>
+    <button class="tab" data-scr="scr-thread">Chat Thread</button>
+    <button class="tab" data-scr="scr-favorites">Favorit</button>
+    <button class="tab" data-scr="scr-notif">Notifikasi</button>
+    <span class="tab-label">Owner</span>
+    <button class="tab" data-scr="scr-owner">Dashboard</button>
+    <button class="tab" data-scr="scr-wizard">Pasang Iklan</button>
+    <button class="tab" data-scr="scr-history">Riwayat</button>
+    <button class="tab" data-scr="scr-voucher">Voucher</button>
+    <span class="tab-label">Agen</span>
+    <button class="tab" data-scr="scr-agent">Dashboard</button>
+    <button class="tab" data-scr="scr-agent-leads">Leads</button>
+    <button class="tab" data-scr="scr-agent-plans">Langganan</button>
+    <button class="tab" data-scr="scr-agent-profile">Profil Agen</button>
+    <span class="tab-label">Lainnya</span>
+    <button class="tab" data-scr="scr-profile">Profil</button>
+    <button class="tab" data-scr="scr-thread-agent">Paywall Agen</button>
+  </nav>
+</header>
+
+<main class="stage">
+  <div class="phone" id="phone">
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="right"><i class="ms ph-duotone ph-wifi-high"></i><i class="ms ph-duotone ph-cell-signal-full"></i><i class="ms ph-duotone ph-battery-high"></i></div>
+    </div>
+
+    <!-- ============ ONBOARDING ============ -->
+    <section class="screen active" id="scr-onboard">
+      <div class="ob-wrap">
+        <div class="ob-art g1" id="ob-art"><i class="ms ph-fill ph-house"></i></div>
+        <div class="ob-dots" id="ob-dots"><i class="on"></i><i></i><i></i></div>
+        <h2 id="ob-title">Cari hunian impian<br>dengan mudah</h2>
+        <p id="ob-desc">Ribuan properti di kota Anda — rumah, apartemen, tanah, dan ruko. Filter sesuai budget dalam 2 ketukan.</p>
+        <div style="margin-top:24px; display:flex; flex-direction:column; gap:10px">
+          <button class="btn btn-primary btn-block" id="ob-next">Lanjut</button>
+          <button class="btn btn-ghost btn-block" data-nav="scr-home">Lewati</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LOGIN ============ -->
+    <section class="screen" id="scr-login">
+      <div class="scroll nonav">
+        <div class="auth-logo">
+          <div class="mark"><i class="ms ph-fill ph-house-line"></i></div>
+          <h2>Selamat datang 👋</h2>
+          <p>Masuk untuk favorit & chat agen</p>
+        </div>
+        <div style="padding:0 24px">
+          <div class="field"><label>Email</label><input class="input" type="email" placeholder="nama@email.com" value="budi@email.com"></div>
+          <div class="field"><label>Password</label><input class="input" type="password" placeholder="••••••••" value="password123"></div>
+          <button class="btn btn-primary btn-block" style="margin-top:22px" data-nav="scr-home" data-toast="Login berhasil (POST /api/auth/mobile-login)">Masuk</button>
+          <div class="divider">atau</div>
+          <button class="btn btn-ghost btn-block" data-nav="scr-home" data-toast="Google Sign-In → POST /api/auth/mobile-google-login">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.4-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.9 2.2-6.3 0-11.7-3.9-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+            Masuk dengan Google
+          </button>
+          <p style="text-align:center; font-size:13.5px; color:var(--muted); margin:20px 0 30px">Belum punya akun? <b style="color:var(--primary-dark); cursor:pointer" data-nav="scr-register">Daftar</b></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ REGISTER ============ -->
+    <section class="screen" id="scr-register">
+      <div class="scroll nonav">
+        <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Daftar</h2></div>
+        <div style="padding:0 24px">
+          <div class="field"><label>Nama Lengkap</label><input class="input" placeholder="Budi Santoso"></div>
+          <div class="field"><label>Email</label><input class="input" type="email" placeholder="nama@email.com"></div>
+          <div class="field"><label>Password <small>(min. 8 karakter)</small></label><input class="input" type="password" placeholder="••••••••"></div>
+          <div class="field"><label>Daftar sebagai</label>
+            <div class="role-pick" id="rolepick">
+              <div class="role-card on" data-role="owner"><i class="ms ph-duotone ph-user" data-ph="user"></i>Pemilik / Buyer</div>
+              <div class="role-card" data-role="agent"><i class="ms ph-duotone ph-briefcase"></i>Agen Properti</div>
+            </div>
+          </div>
+          <div class="note"><i class="ms ph-duotone ph-info"></i><span>Setelah daftar, kami kirim email verifikasi. Akun bisa login di app setelah email diverifikasi.</span></div>
+          <button class="btn btn-primary btn-block" style="margin-top:22px" data-nav="scr-login" data-toast="Register sukses — cek email verifikasi (POST /api/auth/register)">Buat Akun</button>
+          <p style="text-align:center; font-size:12.5px; color:var(--muted); margin:16px 0 30px">Dengan daftar, kamu setuju <b>Syarat & Ketentuan</b> serta <b>Kebijakan Privasi</b>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HOME ============ -->
+    <section class="screen" id="scr-home">
+      <div class="appbar">
+        <div style="display:flex; align-items:center; gap:10px; flex:1">
+          <div class="logo" style="width:34px;height:34px;border-radius:11px"><i class="ms ph-fill ph-house-line" style="font-size:18px"></i></div>
+          <div><div style="font-size:17px; font-weight:800; letter-spacing:-.2px">LapakHunian</div><div style="font-size:10.5px; color:var(--muted); font-weight:600">Bekasi & sekitarnya</div></div>
+        </div>
+        <div class="act" data-nav="scr-notif"><i class="ms ph-duotone ph-bell"></i><i class="dot"></i></div>
+      </div>
+      <div class="scroll" data-navname="home">
+        <div class="searchbar" data-nav="scr-explore">
+          <i class="ms ph-duotone ph-magnifying-glass" data-ph="magnifying-glass"></i><span>Cari rumah, apartemen, kota…</span>
+          <div class="tune-btn" data-sheet="sheet-filter"><i class="ms ph-duotone ph-sliders-horizontal"></i></div>
+        </div>
+
+        <div class="section">
+          <div class="sechead"><h3>Properti Unggulan</h3><a data-nav="scr-explore">Lihat semua</a></div>
+          <div class="carousel">
+            <div class="pcard card" data-nav="scr-detail" style="overflow:hidden">
+              <div class="prop-img g1" style="border-radius:0"><i class="ms ph-fill ph-house-line"></i><span class="imgbadge">UNGGULAN</span><span class="imgcount"><i class="ms ph-duotone ph-image"></i>8</span></div>
+              <div class="prop-body">
+                <h3>Cluster Green Valley</h3>
+                <div class="prop-loc"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Selatan, Kota Bekasi</div>
+                <div class="prop-price">Rp 1.250.000.000</div>
+                <div class="prop-specs"><span><i class="ms ph-duotone ph-bed"></i>4 KT</span><span><i class="ms ph-duotone ph-bathtub"></i>3 KM</span><span><i class="ms ph-duotone ph-ruler"></i>LT 180</span></div>
+              </div>
+            </div>
+            <div class="pcard card" data-nav="scr-detail" style="overflow:hidden">
+              <div class="prop-img g2" style="border-radius:0"><i class="ms ph-fill ph-buildings"></i><span class="imgbadge">UNGGULAN</span><span class="imgcount"><i class="ms ph-duotone ph-image"></i>6</span></div>
+              <div class="prop-body">
+                <h3>Apartemen Grand Summarecon</h3>
+                <div class="prop-loc"><i class="ms ph-duotone ph-map-pin"></i>Serpong, Tangerang</div>
+                <div class="prop-price">Rp 680.000.000</div>
+                <div class="prop-specs"><span><i class="ms ph-duotone ph-bed"></i>2 KT</span><span><i class="ms ph-duotone ph-bathtub"></i>1 KM</span><span><i class="ms ph-duotone ph-ruler"></i>LT 32</span></div>
+              </div>
+            </div>
+            <div class="pcard card" data-nav="scr-detail" style="overflow:hidden">
+              <div class="prop-img g3" style="border-radius:0"><i class="ms ph-fill ph-storefront"></i><span class="imgbadge">UNGGULAN</span><span class="imgcount"><i class="ms ph-duotone ph-image"></i>5</span></div>
+              <div class="prop-body">
+                <h3>Ruko 3 Lantai Summarecon</h3>
+                <div class="prop-loc"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Timur, Kota Bekasi</div>
+                <div class="prop-price">Rp 2.100.000.000</div>
+                <div class="prop-specs"><span><i class="ms ph-duotone ph-stack"></i>3 Lantai</span><span><i class="ms ph-duotone ph-ruler"></i>LT 90</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sechead"><h3>Kategori</h3></div>
+          <div class="catgrid">
+            <div class="cat" data-nav="scr-explore"><i class="ms ph-fill ph-house"></i>Rumah</div>
+            <div class="cat" data-nav="scr-explore"><i class="ms ph-fill ph-buildings"></i>Apartemen</div>
+            <div class="cat" data-nav="scr-explore"><i class="ms ph-fill ph-storefront"></i>Ruko</div>
+            <div class="cat" data-nav="scr-explore"><i class="ms ph-fill ph-mountains"></i>Tanah</div>
+            <div class="cat" data-nav="scr-explore"><i class="ms ph-fill ph-city"></i>Komersial</div>
+            <div class="cat" data-nav="scr-explore"><i class="ms ph-fill ph-house-simple"></i>Townhouse</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sechead"><h3>Kota Populer</h3></div>
+          <div class="citygrid">
+            <div class="city g1" data-nav="scr-explore">Bekasi<small>1.240</small></div>
+            <div class="city g2" data-nav="scr-explore">Jakarta<small>2.830</small></div>
+            <div class="city g3" data-nav="scr-explore">Depok<small>860</small></div>
+            <div class="city g6" data-nav="scr-explore">Bandung<small>1.120</small></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sechead"><h3>Terbaru</h3><a data-nav="scr-explore">Lihat semua</a></div>
+          <div class="stack" style="padding:0; margin-top:0">
+            <div class="listcard" data-nav="scr-detail">
+              <div class="thumb g4"><i class="ms ph-fill ph-house"></i></div>
+              <div style="flex:1">
+                <h4>Rumah Modern 2 Lantai Harapan Indah</h4>
+                <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Utara · SHM</div>
+                <div class="price">Rp 985.000.000</div>
+              </div>
+            </div>
+            <div class="listcard" data-nav="scr-detail">
+              <div class="thumb g5"><i class="ms ph-fill ph-mountains"></i></div>
+              <div style="flex:1">
+                <h4>Tanah Kosong Strategis Grand Galaxy</h4>
+                <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Selatan · SHGB</div>
+                <div class="price">Rp 450.000.000</div>
+              </div>
+            </div>
+            <div class="listcard" data-nav="scr-detail">
+              <div class="thumb g6"><i class="ms ph-fill ph-buildings"></i></div>
+              <div style="flex:1">
+                <h4>Apartemen 2BR Full Furnish</h4>
+                <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Mustika Sinta · SHMSRS</div>
+                <div class="price">Rp 325.000.000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ EXPLORE ============ -->
+    <section class="screen" id="scr-explore">
+      <div class="appbar">
+        <div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div>
+        <h2>Jelajah</h2>
+        <div class="act" data-sheet="sheet-filter"><i class="ms ph-duotone ph-sliders-horizontal"></i></div>
+      </div>
+      <div class="scroll" data-navname="explore">
+        <div class="searchbar" style="margin-top:0">
+          <i class="ms ph-duotone ph-magnifying-glass" data-ph="magnifying-glass"></i><input class="input" style="border:none; padding:0; flex:1; font-size:14px; background:transparent" placeholder="rumah bekasi selatan">
+        </div>
+        <div style="display:flex; gap:8px; padding:14px 20px 4px; overflow-x:auto; scrollbar-width:none">
+          <span class="chip on static"><i class="ms ph-fill ph-tag"></i>Dijual</span>
+          <span class="chip static">Disewa</span>
+          <span class="chip static"><i class="ms ph-duotone ph-house"></i>Rumah</span>
+          <span class="chip static">Apartemen</span>
+          <span class="chip static">Tanah</span>
+        </div>
+        <div style="padding:12px 20px 4px; font-size:12.5px; color:var(--muted); font-weight:600">1.240 properti ditemukan · Page 1/104 (GET /api/properties)</div>
+        <div class="stack" style="margin-top:0">
+          <div class="listcard" data-nav="scr-detail">
+            <div class="thumb g1"><i class="ms ph-fill ph-house"></i><span style="position:absolute;top:6px;left:6px;background:rgba(255,255,255,.94);color:var(--primary-dark);font-size:9px;font-weight:800;padding:3px 8px;border-radius:99px">UNGGULAN</span></div>
+            <div style="flex:1">
+              <h4>Cluster Green Valley Type 250/180</h4>
+              <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Selatan</div>
+              <div class="price">Rp 1.250.000.000</div>
+              <div class="meta" style="margin-top:4px"><span><i class="ms ph-duotone ph-bed"></i>4</span><span><i class="ms ph-duotone ph-bathtub"></i>3</span><span><i class="ms ph-duotone ph-car"></i>2</span></div>
+            </div>
+          </div>
+          <div class="listcard" data-nav="scr-detail">
+            <div class="thumb g4"><i class="ms ph-fill ph-house"></i></div>
+            <div style="flex:1">
+              <h4>Rumah Modern 2 Lantai Harapan Indah</h4>
+              <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Utara</div>
+              <div class="price">Rp 985.000.000</div>
+              <div class="meta" style="margin-top:4px"><span><i class="ms ph-duotone ph-bed"></i>4</span><span><i class="ms ph-duotone ph-bathtub"></i>2</span><span><i class="ms ph-duotone ph-car"></i>1</span></div>
+            </div>
+          </div>
+          <div class="listcard" data-nav="scr-detail">
+            <div class="thumb g2"><i class="ms ph-fill ph-buildings"></i></div>
+            <div style="flex:1">
+              <h4>Apartemen 2BR Full Furnish Mustika</h4>
+              <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Timur</div>
+              <div class="price">Rp 325.000.000</div>
+              <div class="meta" style="margin-top:4px"><span><i class="ms ph-duotone ph-bed"></i>2</span><span><i class="ms ph-duotone ph-bathtub"></i>1</span></div>
+            </div>
+          </div>
+          <div class="listcard" data-nav="scr-detail">
+            <div class="thumb g5"><i class="ms ph-fill ph-mountains"></i></div>
+            <div style="flex:1">
+              <h4>Tanah Kosong Strategis Grand Galaxy</h4>
+              <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Selatan</div>
+              <div class="price">Rp 450.000.000</div>
+              <div class="meta" style="margin-top:4px"><span><i class="ms ph-duotone ph-ruler"></i>LT 120</span><span><i class="ms ph-duotone ph-seal-check"></i>SHGB</span></div>
+            </div>
+          </div>
+          <div class="listcard" data-nav="scr-detail">
+            <div class="thumb g3"><i class="ms ph-fill ph-storefront"></i></div>
+            <div style="flex:1">
+              <h4>Ruko 3 Lantai Summarecon Bekasi</h4>
+              <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Timur</div>
+              <div class="price">Rp 2.100.000.000</div>
+              <div class="meta" style="margin-top:4px"><span><i class="ms ph-duotone ph-stack"></i>3 Lantai</span><span><i class="ms ph-duotone ph-car"></i>1</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center; padding:20px; color:var(--muted); font-size:12.5px; font-weight:600">
+          <i class="ms ph-duotone ph-circle-notch" style="display:block; font-size:22px; animation:spin 1s linear infinite"></i>
+          Memuat halaman berikutnya (Paging 3)…
+        </div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      </div>
+    </section>
+
+    <!-- ============ DETAIL ============ -->
+    <section class="screen" id="scr-detail">
+      <div class="scroll nonav">
+        <div class="pager g1">
+          <i class="ms ph-fill ph-house-line"></i>
+          <span class="imgbadge" style="z-index:2; top:66px">UNGGULAN</span>
+          <span class="imgcount"><i class="ms ph-duotone ph-image"></i>8 foto</span>
+          <div class="pager-nav l"><i class="ms ph ph-caret-left"></i></div>
+          <div class="pager-nav r"><i class="ms ph ph-caret-right"></i></div>
+          <div class="appbar" style="position:absolute; top:0; left:0; right:0; background:linear-gradient(rgba(13,20,30,.38),transparent)">
+            <div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div>
+            <div style="flex:1"></div>
+            <div class="back" data-toast="Bagikan listing (App Links: lapakhunian.com/properti/...)"><i class="ms ph-duotone ph-share-network"></i></div>
+            <div class="back heartf"><i class="ms ph-duotone ph-heart" data-ph="heart"></i></div>
+          </div>
+        </div>
+        <div class="detail-body">
+          <h2>Rumah Modern 2 Lantai Cluster Green Valley</h2>
+          <div class="detail-price">Rp 1.250.000.000</div>
+          <div class="prop-loc" style="margin-top:7px"><i class="ms ph-duotone ph-map-pin"></i>Jl. Anggrek Merah No. 12, Bekasi Selatan, Kota Bekasi</div>
+          <div class="tagrow">
+            <span class="tag">Dijual</span><span class="tag">Rumah</span><span class="tag">SHM</span><span class="tag">Listing Agen</span>
+          </div>
+          <div class="specgrid">
+            <div class="spec"><i class="ms ph-duotone ph-bed"></i><b>4</b><span>Kamar Tidur</span></div>
+            <div class="spec"><i class="ms ph-duotone ph-bathtub"></i><b>3</b><span>Kamar Mandi</span></div>
+            <div class="spec"><i class="ms ph-duotone ph-ruler"></i><b>180</b><span>Luas Tanah</span></div>
+            <div class="spec"><i class="ms ph-duotone ph-resize"></i><b>220</b><span>Luas Bangunan</span></div>
+            <div class="spec"><i class="ms ph-duotone ph-stack"></i><b>2</b><span>Lantai</span></div>
+            <div class="spec"><i class="ms ph-duotone ph-lightning"></i><b>4400</b><span>VA</span></div>
+            <div class="spec"><i class="ms ph-duotone ph-car"></i><b>2</b><span>Carport</span></div>
+            <div class="spec"><i class="ms ph-duotone ph-calendar-blank"></i><b>2021</b><span>Dibangun</span></div>
+          </div>
+          <div class="section" style="padding:0; margin-top:18px">
+            <div class="sechead"><h3 style="font-size:16px">Fasilitas</h3></div>
+            <div class="chiprow">
+              <span class="chip static"><i class="ms ph ph-check"></i>Kolam Renang</span>
+              <span class="chip static"><i class="ms ph ph-check"></i>Taman</span>
+              <span class="chip static"><i class="ms ph ph-check"></i>3 Phase</span>
+              <span class="chip static"><i class="ms ph ph-check"></i>One Gate</span>
+            </div>
+          </div>
+          <div class="section" style="padding:0; margin-top:18px">
+            <div class="sechead"><h3 style="font-size:16px">Deskripsi</h3></div>
+            <p class="desc">Rumah modern minimalis 2 lantai dalam cluster eksklusif one gate system. Dekat Grand Galaxy City, akses tol JORR & Wadaslintang 5 menit. Free biaya DP akad, cluster memiliki club house, kolam renang, dan keamanan 24 jam. Cocok untuk keluarga muda.</p>
+          </div>
+          <div class="section" style="padding:0; margin-top:18px">
+            <div class="sechead"><h3 style="font-size:16px">Lokasi</h3></div>
+            <div class="map-ph"><i class="ms ph-duotone ph-map-trifold"></i>Peta lokasi (Maps Compose) · -6.2415, 106.9924</div>
+          </div>
+          <div class="section" style="padding:0; margin-top:18px; margin-bottom:118px">
+            <div class="sechead"><h3 style="font-size:16px">Dipasang oleh</h3></div>
+            <div class="agent-card" data-nav="scr-agent-profile">
+              <div class="avatar lg">RH</div>
+              <div style="flex:1">
+                <h4>Rian Hidayat <span class="badge b-pro">PRO</span></h4>
+                <div class="sub"><i class="ms ph-duotone ph-star"></i>4.8 (127 ulasan) · AGEN NUSANTARA PROPERTY</div>
+              </div>
+              <i class="ms ph ph-caret-right" style="color:#c3cad6"></i>
+            </div>
+            <p style="font-size:11.5px; color:var(--muted); margin-top:12px; display:flex; align-items:center; gap:5px">
+              <i class="ms ph-duotone ph-shield-check" style="font-size:15px"></i> Nomor agen terjaga — chat dulu lewat app, aman & tercatat.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="sticky-cta">
+        <div class="p"><b>Rp 1,25 M</b><span>4 KT · 3 KM · LT 180</span></div>
+        <button class="btn btn-primary" data-nav="scr-contact"><i class="ms ph-duotone ph-chat-circle-dots" data-ph="chat-circle-dots"></i>Hubungi Agen</button>
+      </div>
+    </section>
+
+    <!-- ============ CONTACT ============ -->
+    <section class="screen" id="scr-contact">
+      <div class="scroll nonav">
+        <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Hubungi Agen</h2></div>
+        <div style="padding:0 24px">
+          <div class="card" style="padding:14px; display:flex; gap:13px; align-items:center; border-radius:18px">
+            <div class="thumb g1" style="width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff"><i class="ms ph-fill ph-house-line" style="font-size:24px"></i></div>
+            <div><h4 style="font-size:13.5px; font-weight:700">Rumah Modern 2 Lantai Cluster Green Valley</h4>
+            <p style="font-size:12px; color:var(--muted); margin-top:3px">Rp 1.250.000.000 · Bekasi Selatan</p></div>
+          </div>
+          <div class="field"><label>Kisaran Budget</label><input class="input" placeholder="cth: Rp 1.100.000.000" value="Rp 1.200.000.000"></div>
+          <div class="field"><label>Rencana beli</label>
+            <div class="timeline-chips" id="timeline">
+              <span class="chip on">Segera</span><span class="chip">1–3 bulan</span><span class="chip">3–6 bulan</span><span class="chip">Belum pasti</span>
+            </div>
+          </div>
+          <div class="field"><label>Pesan</label>
+            <textarea class="input">Halo, saya tertarik dengan Rumah Cluster Green Valley. Apakah masih tersedia dan bisa dijadwalkan survey akhir pekan?</textarea>
+          </div>
+          <div class="note" style="background:var(--tint); color:var(--primary-dark)"><i class="ms ph-duotone ph-lock"></i><span>Data kontakmu hanya dibuka ke agen lewat chat terverifikasi. Aman dari spam.</span></div>
+          <button class="btn btn-primary btn-block" style="margin-top:22px" data-nav="scr-thread" data-toast="Lead terkirim — chat terbuka (POST /properties/:id/contact)">Kirim & Buka Chat</button>
+          <p style="text-align:center; font-size:11.5px; color:var(--muted); margin:14px 0 30px">Rate limit: 1x per properti / 24 jam</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CHAT LIST ============ -->
+    <section class="screen" id="scr-chat-list">
+      <div class="appbar"><h2 style="margin-left:6px">Chat</h2><div style="flex:1"></div><div class="act"><i class="ms ph-duotone ph-magnifying-glass" data-ph="magnifying-glass"></i></div></div>
+      <div class="scroll" data-navname="chat" style="padding-bottom:94px">
+        <div class="chatlist-item" data-nav="scr-thread">
+          <div class="avatar">RH</div>
+          <div class="mid">
+            <h4>Rian Hidayat <time>10:32</time></h4>
+            <p>Baik Pak, bisa dijadwalkan Sabtu pagi jam 9 ya…</p>
+            <span class="prop-tag"><i class="ms ph-duotone ph-house" data-ph="house"></i>Cluster Green Valley</span>
+          </div>
+          <div class="unread-pill">2</div>
+        </div>
+        <div class="chatlist-item">
+          <div class="avatar" style="background:var(--blue-bg); color:var(--blue)">DS</div>
+          <div class="mid">
+            <h4>Dewi Sartika <time>Kemarin</time></h4>
+            <p>Terima kasih, sudah saya terima dokumennya…</p>
+            <span class="prop-tag"><i class="ms ph-duotone ph-buildings"></i>Apartemen Mustika 2BR</span>
+          </div>
+        </div>
+        <div class="chatlist-item">
+          <div class="avatar" style="background:var(--amber-bg); color:var(--amber)">AH</div>
+          <div class="mid">
+            <h4>Agus Haryono <time>Sel</time></h4>
+            <p>Oke, harga bisa di nego dikit lah…</p>
+            <span class="prop-tag"><i class="ms ph-duotone ph-mountains"></i>Tanah Grand Galaxy</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CHAT THREAD (buyer view) ============ -->
+    <section class="screen" id="scr-thread">
+      <div class="appbar">
+        <div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div>
+        <div class="avatar" style="width:36px; height:36px; font-size:13px">RH</div>
+        <div style="flex:1"><h2 style="font-size:15px">Rian Hidayat</h2><div style="font-size:10.5px; color:var(--ok); font-weight:700; display:flex; align-items:center; gap:4px"><i style="width:7px;height:7px;background:var(--ok);border-radius:50%;display:inline-block"></i>Online</div></div>
+        <div class="act" data-nav="scr-detail"><i class="ms ph-duotone ph-info"></i></div>
+      </div>
+      <div class="thread" id="thread">
+        <div class="daysep">Hari ini</div>
+        <div class="bubble them">Halo Pak Budi, terima kasih minatnya dengan Cluster Green Valley 🙏<time>10:05</time></div>
+        <div class="bubble me">Halo Pak Rian, rumahnya masih available? Rencananya sabtu mau survey.<time>10:08</time></div>
+        <div class="bubble them">Masih Pak, unit ready 2: tipe 250/180 dan corner 220/160. Sabtu jam 9 pagi bisa, saya kirim lokasi pin-nya ya.<time>10:30</time></div>
+        <div class="bubble them">Ini saya lampirkan brosur lengkapnya (PDF).<time>10:31</time></div>
+        <div class="bubble me">Siap Pak, saya konfirmasi ulang jumat malam. Terima kasih!<time>10:32</time></div>
+      </div>
+      <div class="inputbar">
+        <input id="chatinput" placeholder="Tulis pesan…">
+        <button class="send" id="sendbtn"><i class="ms ph-duotone ph-paper-plane-tilt"></i></button>
+      </div>
+    </section>
+
+    <!-- ============ AGENT PAYWALL THREAD ============ -->
+    <section class="screen" id="scr-thread-agent">
+      <div class="scroll nonav">
+        <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Pesan Masuk (Agen)</h2></div>
+        <div style="padding:0 24px">
+          <div class="card" style="padding:15px; display:flex; gap:13px; align-items:center; margin-top:8px; border-radius:18px">
+            <div class="avatar">BS</div>
+            <div style="flex:1"><h4 style="font-size:14px; font-weight:700">Budi Santoso</h4><p style="font-size:11.5px; color:var(--muted)">Lead baru · Cluster Green Valley</p></div>
+            <span class="badge b-pending">Terkunci</span>
+          </div>
+          <div class="blurbox">
+            <i class="ms ph-duotone ph-lock" style="color:var(--muted); font-size:30px"></i>
+            <div class="blurtext">Halo, saya tertarik dengan rumah ini. Budget saya 1.2 M, apakah bisa nego? Nomor saya 0812-xxxx-xxxx, hubungi saya sore ini ya Pak. Terima kasih sebelumnya.</div>
+            <p style="font-size:11.5px; color:var(--muted); text-align:center">Pesan & kontak pembeli terkunci</p>
+            <button class="btn btn-primary btn-block" id="unlockbtn"><i class="ms ph-duotone ph-lock-open"></i>Buka Chat — 1 Lead</button>
+            <p style="font-size:11px; color:var(--muted)">Saldo lead: <b>45</b> · Paket Pro berjalan</p>
+          </div>
+          <div class="note"><i class="ms ph-duotone ph-info"></i><span>Pembeli sudah bisa chat dari sisi mereka. Unlock memotong saldo lead 1 (komersial/office = 2). Enterprise = unlimited.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FAVORITES ============ -->
+    <section class="screen" id="scr-favorites">
+      <div class="appbar"><h2 style="margin-left:6px">Favorit</h2><div style="flex:1"></div></div>
+      <div class="scroll" data-navname="fav">
+        <div class="stack" style="margin-top:10px">
+          <div class="listcard" data-nav="scr-detail">
+            <div class="thumb g1"><i class="ms ph-fill ph-house-line"></i></div>
+            <div style="flex:1">
+              <h4>Cluster Green Valley Type 250/180</h4>
+              <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Selatan</div>
+              <div class="price">Rp 1.250.000.000</div>
+            </div>
+            <div class="heart on" style="position:static; align-self:center"><i class="ms ph-duotone ph-heart" data-ph="heart"></i></div>
+          </div>
+          <div class="listcard" data-nav="scr-detail">
+            <div class="thumb g2"><i class="ms ph-fill ph-buildings"></i></div>
+            <div style="flex:1">
+              <h4>Apartemen 2BR Full Furnish Mustika</h4>
+              <div class="meta"><i class="ms ph-duotone ph-map-pin"></i>Bekasi Timur</div>
+              <div class="price">Rp 325.000.000</div>
+            </div>
+            <div class="heart on" style="position:static; align-self:center"><i class="ms ph-duotone ph-heart" data-ph="heart"></i></div>
+          </div>
+        </div>
+        <div style="padding:32px 24px; text-align:center; color:var(--muted)">
+          <i class="ms ph-duotone ph-arrows-clockwise" style="font-size:40px; color:#cdd5e0"></i>
+          <p style="font-size:12px; margin-top:8px">Sinkron otomatis dengan akun web (GET /api/favorites) · tersimpan offline di Room</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NOTIFICATIONS ============ -->
+    <section class="screen" id="scr-notif">
+      <div class="appbar">
+        <div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Notifikasi</h2>
+        <div class="act" data-toast="Semua ditandai dibaca (PATCH /notifications/read-all)"><i class="ms ph-duotone ph-checks"></i></div>
+      </div>
+      <div class="scroll">
+        <div class="notif-item"><div class="unread"></div><div class="ic ic-green"><i class="ms ph-duotone ph-tag"></i></div>
+          <div style="flex:1"><h4>Lead baru masuk!</h4><p>Budi Santoso tertarik dengan <b>Cluster Green Valley</b>. Chat terkunci — buka dengan 1 lead.</p></div><time>2 mnt</time></div>
+        <div class="notif-item"><div class="unread"></div><div class="ic ic-blue"><i class="ms ph-duotone ph-chat-circle-dots" data-ph="chat-circle-dots"></i></div>
+          <div style="flex:1"><h4>Pesan baru dari Rian Hidayat</h4><p>"Masih Pak, unit ready 2: tipe 250/180 dan…"</p></div><time>10 mnt</time></div>
+        <div class="notif-item"><div class="ic ic-green"><i class="ms ph-duotone ph-check-circle"></i></div>
+          <div style="flex:1"><h4>Iklan disetujui ✅</h4><p><b>Rumah Modern 2 Lantai Harapan Indah</b> kini tayang publik.</p></div><time>1 jam</time></div>
+        <div class="notif-item"><div class="ic ic-amber"><i class="ms ph-duotone ph-ticket"></i></div>
+          <div style="flex:1"><h4>Voucher baru untukmu</h4><p>Diskon 25% paket lead, berlaku sampai 30 Nov.</p></div><time>3 jam</time></div>
+        <div class="notif-item"><div class="ic ic-amber"><i class="ms ph-duotone ph-hourglass-medium"></i></div>
+          <div style="flex:1"><h4>Iklan mendekati kedaluwarsa</h4><p><b>Tanah Kosong Grand Galaxy</b> berakhir dalam 5 hari. Perpanjang Rp 25.000 / 30 hari.</p></div><time>1 hari</time></div>
+      </div>
+    </section>
+
+    <!-- ============ PROFILE ============ -->
+    <section class="screen" id="scr-profile">
+      <div class="appbar"><h2 style="margin-left:6px">Profil</h2></div>
+      <div class="scroll" data-navname="profile">
+        <div class="prof-head">
+          <div class="avatar lg">BS</div>
+          <div style="flex:1"><h3>Budi Santoso</h3><p>budi@email.com</p></div>
+          <span class="badge b-approved">OWNER</span>
+        </div>
+        <div style="padding:0 20px; margin-top:12px">
+          <div class="seg" id="roleswitch">
+            <button class="on" data-roleto="owner">Mode Owner</button>
+            <button data-roleto="agent">Mode Agen</button>
+          </div>
+        </div>
+        <div class="menu-group" style="margin:16px 20px 0">
+          <div class="menu-item" data-nav="scr-owner"><i class="ms ph-duotone ph-squares-four"></i><span>Dashboard Saya</span><span class="ms chev">chevron_right</span></div>
+          <div class="menu-item" data-nav="scr-wizard"><i class="ms ph-duotone ph-plus-circle"></i><span>Pasang Iklan</span><span class="ms chev">chevron_right</span></div>
+          <div class="menu-item" data-nav="scr-favorites"><i class="ms ph-duotone ph-heart" data-ph="heart"></i><span>Favorit</span><span class="tag-right">2</span></div>
+          <div class="menu-item" data-nav="scr-chat-list"><i class="ms ph-duotone ph-chat-circle-dots" data-ph="chat-circle-dots"></i><span>Chat</span><span class="tag-right">2 baru</span></div>
+        </div>
+        <div class="menu-group" style="margin:14px 20px 0">
+          <div class="menu-item" data-nav="scr-history"><i class="ms ph-duotone ph-receipt"></i><span>Riwayat & Transaksi</span><span class="ms chev">chevron_right</span></div>
+          <div class="menu-item" data-nav="scr-voucher"><i class="ms ph-duotone ph-ticket"></i><span>Voucher</span><span class="tag-right">1 bisa klaim</span></div>
+          <div class="menu-item" data-toast="Simulasi KPR — kalkulator lokal offline"><i class="ms ph-duotone ph-calculator"></i><span>Simulasi KPR</span><span class="ms chev">chevron_right</span></div>
+        </div>
+        <div class="menu-group" style="margin:14px 20px 20px">
+          <div class="menu-item" data-toast="Pengaturan: tema, biometric, notifikasi"><i class="ms ph-duotone ph-gear"></i><span>Pengaturan</span><span class="ms chev">chevron_right</span></div>
+          <div class="menu-item" data-toast="Support: buat ticket"><i class="ms ph-duotone ph-question"></i><span>Bantuan</span><span class="ms chev">chevron_right</span></div>
+          <div class="menu-item" data-nav="scr-login" data-toast="Logout — token dihapus dari Encrypted DataStore"><i class="ms ph-duotone ph-sign-out" style="color:var(--error); background:var(--red-bg)"></i><span style="color:var(--error)">Keluar</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ OWNER DASHBOARD ============ -->
+    <section class="screen" id="scr-owner">
+      <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Dashboard Saya</h2></div>
+      <div class="scroll">
+        <div class="dash-head">
+          <div class="statrow">
+            <div class="stat"><b>2</b><span>Aktif</span></div>
+            <div class="stat"><b>1</b><span>Review</span></div>
+            <div class="stat"><b>245</b><span>Dilihat</span></div>
+          </div>
+        </div>
+        <div class="section" style="margin-top:18px">
+          <div class="sechead"><h3>Properti Saya</h3><a>GET /properties?contactEmail=…</a></div>
+        </div>
+        <div class="stack" style="margin-top:0">
+          <div class="prop-item">
+            <div class="thumb g4"><i class="ms ph-fill ph-house"></i></div>
+            <div style="flex:1">
+              <h4>Rumah Modern 2 Lantai Harapan Indah</h4>
+              <span class="badge b-approved"><i class="ms ph-duotone ph-check-circle" style="font-size:12px"></i>Tayang</span>
+              <div class="views"><span><i class="ms ph-duotone ph-eye"></i>245 dilihat</span><span><i class="ms ph-duotone ph-heart" data-ph="heart"></i>12 favorit</span></div>
+              <div class="prop-actions">
+                <button class="mini-btn"><i class="ms ph-duotone ph-pencil-simple"></i>Edit</button>
+                <button class="mini-btn green" data-toast="Tandai TERJUAL — POST /properties/:id"><i class="ms ph-duotone ph-tag"></i>Terjual</button>
+                <button class="mini-btn red"><i class="ms ph-duotone ph-trash"></i></button>
+              </div>
+            </div>
+          </div>
+          <div class="prop-item">
+            <div class="thumb g6"><i class="ms ph-fill ph-buildings"></i></div>
+            <div style="flex:1">
+              <h4>Apartemen 2BR Full Furnish Mustika</h4>
+              <span class="badge b-pending"><i class="ms ph-duotone ph-hourglass-medium" style="font-size:12px"></i>Menunggu Review</span>
+              <div class="views"><span><i class="ms ph-duotone ph-clock"></i>Direview admin ±1×24 jam</span></div>
+              <div class="prop-actions"><button class="mini-btn"><i class="ms ph-duotone ph-pencil-simple"></i>Edit</button></div>
+            </div>
+          </div>
+          <div class="prop-item">
+            <div class="thumb g5"><i class="ms ph-fill ph-mountains"></i></div>
+            <div style="flex:1">
+              <h4>Tanah Kosong Strategis Grand Galaxy</h4>
+              <span class="badge b-expired"><i class="ms ph-duotone ph-calendar-x" style="font-size:12px"></i>Kedaluwarsa</span>
+              <div class="views"><span><i class="ms ph-duotone ph-eye"></i>89 dilihat</span></div>
+              <div class="prop-actions">
+                <button class="mini-btn green" data-nav="scr-payment"><i class="ms ph-duotone ph-arrows-clockwise"></i>Perpanjang Rp 25.000</button>
+              </div>
+            </div>
+          </div>
+          <div class="prop-item">
+            <div class="thumb g3"><i class="ms ph-fill ph-storefront"></i></div>
+            <div style="flex:1">
+              <h4>Ruko 3 Lantai Summarecon</h4>
+              <span class="badge b-sold"><i class="ms ph-duotone ph-tag" style="font-size:12px"></i>Terjual</span>
+              <div class="views"><span><i class="ms ph-duotone ph-eye"></i>412 dilihat</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="fab" data-nav="scr-wizard"><i class="ms ph-duotone ph-plus"></i>Pasang Iklan</div>
+    </section>
+
+    <!-- ============ WIZARD PASANG IKLAN ============ -->
+    <section class="screen" id="scr-wizard">
+      <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Pasang Iklan</h2></div>
+      <div class="wiz-steps" id="wiz-steps">
+        <div class="wiz-step on"><i></i><span>Informasi</span></div>
+        <div class="wiz-step"><i></i><span>Detail</span></div>
+        <div class="wiz-step"><i></i><span>Foto</span></div>
+        <div class="wiz-step"><i></i><span>Harga</span></div>
+      </div>
+      <div class="scroll nonav" style="padding:12px 24px 40px">
+        <!-- STEP 1 -->
+        <div class="wstep" data-step="1">
+          <div class="seg" style="margin-top:8px" id="wiz-purpose"><button class="on">Dijual</button><button>Disewa</button></div>
+          <div class="field"><label>Judul Iklan <small>(maks 100 karakter)</small></label><input class="input" value="Rumah Minimalis 2 Lantai ClusterGreen View"></div>
+          <div class="field"><label>Kategori</label>
+            <div class="chiprow">
+              <span class="chip on"><i class="ms ph-duotone ph-house"></i>Rumah</span><span class="chip">Apartemen</span><span class="chip">Ruko</span><span class="chip">Tanah</span>
+            </div>
+          </div>
+          <div class="field"><label>Deskripsi</label><textarea class="input">Rumah 2 lantai siap huni, lingkungan aman & asri, dekat sekolah dan akses tol. Sertifikat SHM pecah, bebas banjir.</textarea></div>
+        </div>
+        <!-- STEP 2 -->
+        <div class="wstep" data-step="2" style="display:none">
+          <div class="specgrid" style="grid-template-columns:repeat(2,1fr)">
+            <div class="field" style="margin:0"><label>Luas Tanah (m²)</label><input class="input" value="120"></div>
+            <div class="field" style="margin:0"><label>Luas Bangunan (m²)</label><input class="input" value="145"></div>
+            <div class="field" style="margin:0"><label>Kamar Tidur</label><input class="input" value="3"></div>
+            <div class="field" style="margin:0"><label>Kamar Mandi</label><input class="input" value="2"></div>
+            <div class="field" style="margin:0"><label>Lantai</label><input class="input" value="2"></div>
+            <div class="field" style="margin:0"><label>Listrik (VA)</label><input class="input" value="2200"></div>
+          </div>
+          <div class="field"><label>Sertifikat</label>
+            <div class="chiprow"><span class="chip on">SHM</span><span class="chip">SHGB</span><span class="chip">SHMSRS</span><span class="chip">AJB</span></div>
+          </div>
+          <div class="field"><label>Furnishing</label>
+            <div class="chiprow"><span class="chip on">Kosong</span><span class="chip">Semi Furnish</span><span class="chip">Full Furnish</span></div>
+          </div>
+          <div class="field"><label>Fasilitas</label>
+            <div class="chiprow">
+              <span class="chip on">Carport</span><span class="chip on">Taman</span><span class="chip">Kolam Renang</span><span class="chip">Masjid</span><span class="chip">CCTV</span><span class="chip">One Gate</span>
+            </div>
+          </div>
+        </div>
+        <!-- STEP 3 -->
+        <div class="wstep" data-step="3" style="display:none">
+          <p style="font-size:12.5px; color:var(--muted); margin-top:10px">Foto pertama jadi thumbnail. Maks 10 foto, masing-masing ≤10 MB. Server otomatis kompres ke WebP + deteksi kontak (OCR).</p>
+          <div class="photo-grid" style="margin-top:16px">
+            <div class="ph-tile g1"><i class="ms ph-fill ph-house"></i><div class="del"><i class="ms ph ph-x"></i></div></div>
+            <div class="ph-tile g3"><i class="ms ph-fill ph-door"></i><div class="del"><i class="ms ph ph-x"></i></div></div>
+            <div class="ph-tile g5"><i class="ms ph-fill ph-fork-knife"></i><div class="del"><i class="ms ph ph-x"></i></div></div>
+            <div class="ph-tile add" id="addphoto"><i class="ms ph-duotone ph-camera-plus"></i><span style="font-size:10.5px; font-weight:700">Tambah</span></div>
+          </div>
+        </div>
+        <!-- STEP 4 -->
+        <div class="wstep" data-step="4" style="display:none">
+          <div class="field"><label>Alamat Lengkap</label><input class="input" value="Jl. Melati Indah Blok C2 No. 8"></div>
+          <div class="field"><label>Kota</label>
+            <select class="input select"><option>Kota Bekasi</option><option>Kab. Bekasi</option><option>Depok</option><option>Jakarta Timur</option></select>
+          </div>
+          <div class="field"><label>Harga</label><input class="input" value="Rp 950.000.000"></div>
+          <div class="price-preview" style="margin-top:18px">
+            <span style="font-size:11px; font-weight:800; color:var(--primary-dark); letter-spacing:.5px">PREVIEW KARTU</span>
+            <div style="display:flex; gap:13px; margin-top:10px; align-items:center">
+              <div class="thumb g1" style="width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff"><i class="ms ph-fill ph-house" style="font-size:22px"></i></div>
+              <div><h4 style="font-size:13px; font-weight:700">Rumah Minimalis 2 Lantai…</h4><b style="color:var(--primary-dark)">Rp 950.000.000</b><p style="font-size:11px; color:var(--muted)">Kota Bekasi · Rumah · Dijual</p></div>
+            </div>
+          </div>
+          <div class="note"><i class="ms ph-duotone ph-info"></i><span>Iklan pemilik gratis 30 hari. Setelah submit, iklan masuk review admin (status PENDING) sebelum tayang.</span></div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:26px">
+          <button class="btn btn-ghost" id="wizprev" style="flex:0 0 112px">Kembali</button>
+          <button class="btn btn-primary" id="wiznext" style="flex:1">Lanjut</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SUCCESS SUBMIT ============ -->
+    <section class="screen" id="scr-payment">
+      <div class="scroll nonav" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 30px; text-align:center">
+        <div style="width:88px; height:88px; border-radius:50%; background:var(--tint); display:flex; align-items:center; justify-content:center; color:var(--primary-dark)"><i class="ms ph-duotone ph-wallet" style="font-size:42px"></i></div>
+        <h2 style="font-size:22px; font-weight:800; margin-top:20px; letter-spacing:-.3px">Perpanjang Iklan</h2>
+        <p style="color:var(--muted); font-size:14px; margin-top:9px; line-height:1.5">Tanah Kosong Grand Galaxy<br><b style="color:var(--ink)">Rp 25.000 / 30 hari</b></p>
+        <div class="card" style="width:100%; padding:18px; margin-top:20px; text-align:left; border-radius:18px">
+          <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:9px"><span style="color:var(--muted)">Metode</span><b>Midtrans Snap</b></div>
+          <div style="display:flex; justify-content:space-between; font-size:13px"><span style="color:var(--muted)">Alur app</span><b>Custom Tabs → polling status</b></div>
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-top:20px" data-nav="scr-owner" data-toast="Pembayaran PAID — iklan tayang 30 hari lagi">Bayar Sekarang</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:10px" data-back>Nanti Saja</button>
+      </div>
+    </section>
+
+    <section class="screen" id="scr-submitted">
+      <div class="scroll nonav" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 30px; text-align:center">
+        <div style="width:88px; height:88px; border-radius:50%; background:var(--amber-bg); display:flex; align-items:center; justify-content:center; color:var(--amber)"><i class="ms ph-duotone ph-hourglass-medium" style="font-size:42px"></i></div>
+        <h2 style="font-size:22px; font-weight:800; margin-top:20px; letter-spacing:-.3px">Iklan Terkirim!</h2>
+        <p style="color:var(--muted); font-size:14px; margin-top:9px; line-height:1.5">Status: <span class="badge b-pending" style="vertical-align:middle">PENDING</span><br>Admin review maks 1×24 jam. Notifikasi akan muncul saat tayang.</p>
+        <button class="btn btn-primary btn-block" style="margin-top:20px" data-nav="scr-owner">Lihat Dashboard</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:10px" data-nav="scr-home">Kembali ke Beranda</button>
+      </div>
+    </section>
+
+    <!-- ============ HISTORY / TRANSACTIONS ============ -->
+    <section class="screen" id="scr-history">
+      <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Riwayat & Transaksi</h2></div>
+      <div class="scroll">
+        <div style="padding:16px 20px 8px; font-size:11.5px; font-weight:800; color:var(--muted); letter-spacing:.8px">TRANSAKSI</div>
+        <div class="tx-item"><div class="ic ic-green" style="width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center"><i class="ms ph-duotone ph-arrows-clockwise"></i></div>
+          <div class="mid"><h4>Perpanjang iklan 30 hari</h4><p>Tanah Grand Galaxy · 12 Nov 2026</p></div>
+          <div class="amt">Rp 25.000<br><span class="badge b-approved">LUNAS</span></div></div>
+        <div class="tx-item"><div class="ic ic-blue" style="width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center"><i class="ms ph-duotone ph-tag"></i></div>
+          <div class="mid"><h4>Paket Lead Starter</h4><p>25 leads · 28 Okt 2026</p></div>
+          <div class="amt">Rp 250.000<br><span class="badge b-approved">LUNAS</span></div></div>
+        <div class="tx-item"><div class="ic ic-amber" style="width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center"><i class="ms ph-duotone ph-clock"></i></div>
+          <div class="mid"><h4>Komisi penjualan 2%</h4><p>Ruko Summarecon · 15 Okt 2026</p></div>
+          <div class="amt">Rp 2.100.000<br><span class="badge b-pending">TAGIHAN</span></div></div>
+        <div style="padding:16px 20px 8px; font-size:11.5px; font-weight:800; color:var(--muted); letter-spacing:.8px">TITIP JUAL (KONSINYASI)</div>
+        <div class="tx-item"><div class="ic ic-green" style="width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center"><i class="ms ph-duotone ph-handshake"></i></div>
+          <div class="mid"><h4>Rumah 2 Lantai Jatiasih</h4><p>Titip jual · status: <b>DAFTAR</b> → dihubungi tim</p></div>
+          <span class="badge b-pending">PROSES</span></div>
+      </div>
+    </section>
+
+    <!-- ============ VOUCHER ============ -->
+    <section class="screen" id="scr-voucher">
+      <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Voucher</h2></div>
+      <div class="scroll">
+        <div style="padding:16px 20px 10px; font-size:11.5px; font-weight:800; color:var(--muted); letter-spacing:.8px">BISA DIKLAIM</div>
+        <div class="voucher" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">
+          <h3>Diskon 25% Paket Lead</h3>
+          <p>Berlaku untuk semua paket lead, min. transaksi Rp 250.000</p>
+          <span class="code">LEAD25</span>
+          <button class="btn btn-sm" style="background:#fff; color:#7c3aed; margin-top:14px" data-toast="Voucher diklaim — otomatis dipakai saat checkout">Klaim Sekarang</button>
+        </div>
+        <div class="voucher" style="background:linear-gradient(135deg,#0c8a44,#18b35b)">
+          <h3>Gratis Perpanjang Iklan</h3>
+          <p>Khusus pengguna baru app — perpanjang 1 iklan gratis 30 hari</p>
+          <span class="code">FREE30</span>
+          <button class="btn btn-sm" style="background:#fff; color:var(--primary-dark); margin-top:14px" data-toast="Voucher diklaim">Klaim Sekarang</button>
+        </div>
+        <div style="padding:8px 20px; font-size:11.5px; font-weight:800; color:var(--muted); letter-spacing:.8px">SUDAH DIPAKAI</div>
+        <div class="voucher" style="background:linear-gradient(135deg,#9aa4b2,#aab3c0); opacity:.75">
+          <h3>Diskon 10% Langganan Pro</h3>
+          <p>Dipakai 02 Nov 2026</p>
+          <span class="code">PRO10</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AGENT DASHBOARD ============ -->
+    <section class="screen" id="scr-agent">
+      <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Dashboard Agen</h2></div>
+      <div class="scroll">
+        <div class="dash-head">
+          <div class="agent-card" style="cursor:pointer" data-nav="scr-agent-profile">
+            <div class="avatar lg">RH</div>
+            <div style="flex:1">
+              <h4>Rian Hidayat <span class="badge b-pro">PRO</span></h4>
+              <div class="sub"><i class="ms ph-duotone ph-star"></i>4.8 · 127 ulasan · 32 listing</div>
+            </div>
+            <i class="ms ph ph-caret-right" style="color:#c3cad6"></i>
+          </div>
+          <div class="balance-card">
+            <div><span>SALDO LEAD</span><b>45</b></div>
+            <button class="mini-btn" style="background:rgba(255,255,255,.2); color:#fff" data-nav="scr-agent-plans"><i class="ms ph-duotone ph-plus"></i>Isi Paket</button>
+          </div>
+          <div class="statrow">
+            <div class="stat"><b>32<i style="font-size:12px; color:var(--muted)">/50</i></b><span>Slot Iklan</span></div>
+            <div class="stat"><b>18</b><span>Lead Bln Ini</span></div>
+            <div class="stat"><b>12</b><span>Chat Blm Dibaca</span></div>
+          </div>
+          <div class="card" style="padding:14px 16px; display:flex; align-items:center; gap:11px; border-radius:18px">
+            <i class="ms ph-fill ph-seal-check" style="color:var(--primary-dark); background:var(--tint); border-radius:12px; padding:8px"></i>
+            <div style="flex:1"><b style="font-size:13px">Paket PRO aktif</b><div style="font-size:11.5px; color:var(--muted)">Sampai 12 Des 2026 · auto-renew on</div></div>
+            <span class="badge b-approved">AKTIF</span>
+          </div>
+        </div>
+        <div class="qa-grid">
+          <div class="qa" data-nav="scr-agent-leads"><i class="ms ph-duotone ph-tag"></i>Leads</div>
+          <div class="qa" data-nav="scr-agent-plans"><i class="ms ph-duotone ph-crown"></i>Langganan</div>
+          <div class="qa" data-nav="scr-chat-list"><i class="ms ph-duotone ph-chat-circle-dots" data-ph="chat-circle-dots"></i>Pesan</div>
+          <div class="qa" data-nav="scr-history"><i class="ms ph-duotone ph-receipt"></i>Riwayat</div>
+          <div class="qa" data-nav="scr-compensation"><i class="ms ph-duotone ph-gift"></i>Kompensasi</div>
+          <div class="qa" data-toast="Lead WhatsApp — kontak via WA tercatat"><i class="ms ph-duotone ph-phone"></i>Lead WA</div>
+          <div class="qa" data-nav="scr-wizard"><i class="ms ph-duotone ph-plus-circle"></i>Pasang Iklan</div>
+          <div class="qa" data-nav="scr-voucher"><i class="ms ph-duotone ph-ticket"></i>Voucher</div>
+        </div>
+        <div class="section">
+          <div class="sechead"><h3>Listing Terbaru</h3><a data-toast="Semua listing agen">Semua</a></div>
+          <div class="stack" style="padding:0; margin-top:0">
+            <div class="listcard"><div class="thumb g1"><i class="ms ph-fill ph-house-line"></i></div>
+              <div style="flex:1"><h4>Cluster Green Valley Type 250/180</h4>
+              <div class="meta"><i class="ms ph-duotone ph-eye"></i>245 dilihat · 8 leads</div><div class="price">Rp 1.250.000.000</div></div>
+              <span class="badge b-approved" style="align-self:center">TAYANG</span></div>
+            <div class="listcard"><div class="thumb g4"><i class="ms ph-fill ph-house"></i></div>
+              <div style="flex:1"><h4>Rumah Type 36 Cikarang</h4>
+              <div class="meta"><i class="ms ph-duotone ph-eye"></i>64 dilihat · 2 leads</div><div class="price">Rp 380.000.000</div></div>
+              <span class="badge b-approved" style="align-self:center">TAYANG</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AGENT LEADS ============ -->
+    <section class="screen" id="scr-agent-leads">
+      <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Leads</h2>
+        <div class="act" data-nav="scr-agent-plans"><i class="ms ph-duotone ph-shopping-cart-simple"></i></div></div>
+      <div class="scroll">
+        <div class="balance-card" style="margin-top:12px">
+          <div><span>SALDO LEAD</span><b>45</b></div>
+          <button class="mini-btn" style="background:rgba(255,255,255,.2); color:#fff" data-nav="scr-agent-plans"><i class="ms ph-duotone ph-plus"></i>Beli Paket</button>
+        </div>
+        <div class="section" style="margin-top:18px">
+          <div class="sechead"><h3>Lead Masuk</h3><a>GET /api/leads</a></div>
+        </div>
+        <div class="stack" style="margin-top:0">
+          <div class="lead-card">
+            <div class="top"><h4>Budi Santoso</h4><span class="badge b-pending">BARU</span></div>
+            <div class="prop-ref"><i class="ms ph-duotone ph-house" data-ph="house"></i>Cluster Green Valley · Rp 1,25 M · Budget 1,2 M</div>
+            <div class="lead-contact">
+              <div><i class="ms ph-duotone ph-identification-card"></i>Budi Santoso</div>
+              <div><i class="ms ph-duotone ph-phone"></i>0812-8899-7766</div>
+              <div><i class="ms ph-duotone ph-clock"></i>Rencana: Segera</div>
+            </div>
+            <div class="prop-actions">
+              <button class="mini-btn green" data-nav="scr-thread"><i class="ms ph-duotone ph-chat-circle-dots" data-ph="chat-circle-dots"></i>Chat Terbuka</button>
+              <button class="mini-btn" data-toast="Tandai selesai"><i class="ms ph-duotone ph-check-circle"></i>Selesai</button>
+            </div>
+          </div>
+          <div class="lead-card">
+            <div class="top"><h4>Siti Marlina</h4><span class="badge b-pending">TERKUNCI</span></div>
+            <div class="prop-ref"><i class="ms ph-duotone ph-house" data-ph="house"></i>Rumah Type 36 Cikarang · Rp 380 jt</div>
+            <div class="lead-contact" style="filter:blur(4px); user-select:none">
+              <div><i class="ms ph-duotone ph-identification-card"></i>Siti Marlina</div>
+              <div><i class="ms ph-duotone ph-phone"></i>0857-1122-3344</div>
+              <div><i class="ms ph-duotone ph-clock"></i>Rencana: 1–3 bulan</div>
+            </div>
+            <div class="prop-actions">
+              <button class="mini-btn green" data-toast="Chat dibuka — saldo lead 45 → 44"><i class="ms ph-duotone ph-lock-open"></i>Buka · 1 Lead</button>
+              <button class="mini-btn red" data-toast="Dispute dikirim — POST /leads/dispute"><i class="ms ph-duotone ph-flag"></i>Dispute</button>
+            </div>
+          </div>
+          <div class="lead-card">
+            <div class="top"><h4>Hendra Wijaya</h4><span class="badge b-approved">TERBUKA</span></div>
+            <div class="prop-ref"><i class="ms ph-duotone ph-buildings"></i>Apartemen Mustika 2BR · Rp 325 jt</div>
+            <div class="lead-contact">
+              <div><i class="ms ph-duotone ph-identification-card"></i>Hendra Wijaya</div>
+              <div><i class="ms ph-duotone ph-phone"></i>0813-5566-7788</div>
+              <div><i class="ms ph-duotone ph-clock"></i>Rencana: 3–6 bulan</div>
+            </div>
+            <div class="prop-actions">
+              <button class="mini-btn green" data-nav="scr-thread"><i class="ms ph-duotone ph-chat-circle-dots" data-ph="chat-circle-dots"></i>Chat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AGENT PLANS ============ -->
+    <section class="screen" id="scr-agent-plans">
+      <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Langganan Agen</h2></div>
+      <div class="scroll">
+        <div style="padding:8px 24px; font-size:12.5px; color:var(--muted); font-weight:600; line-height:1.5">Paket menentukan slot iklan, leads tiap bulan, dan chat unlimited. Bisa upgrade kapan saja.</div>
+        <div class="stack" style="margin-top:14px">
+          <div class="plan">
+            <h3>Basic</h3><div class="pr">Rp 150.000<small> /30 hari</small></div>
+            <ul>
+              <li><i class="ms ph-duotone ph-check-circle"></i>10 slot iklan</li>
+              <li><i class="ms ph-duotone ph-check-circle"></i>20 leads / bulan</li>
+              <li><i class="ms ph-duotone ph-x-circle"></i>Chat unlimited</li>
+            </ul>
+            <button class="btn btn-outline btn-block" data-nav="scr-payment">Pilih Basic</button>
+          </div>
+          <div class="plan hot">
+            <span class="pop">TERPOPULER</span>
+            <h3>Pro <span class="cur-tag">PAKETMU</span></h3><div class="pr">Rp 400.000<small> /30 hari</small></div>
+            <ul>
+              <li><i class="ms ph-duotone ph-check-circle"></i>50 slot iklan</li>
+              <li><i class="ms ph-duotone ph-check-circle"></i>60 leads / bulan</li>
+              <li><i class="ms ph-duotone ph-x-circle"></i>Chat unlimited</li>
+              <li><i class="ms ph-duotone ph-check-circle"></i>Badge PRO + profil prioritas</li>
+            </ul>
+            <button class="btn btn-primary btn-block" data-nav="scr-payment">Perpanjang Pro</button>
+          </div>
+          <div class="plan">
+            <h3>Enterprise</h3><div class="pr">Rp 1.000.000<small> /30 hari</small></div>
+            <ul>
+              <li><i class="ms ph-duotone ph-check-circle"></i>200 slot iklan</li>
+              <li><i class="ms ph-duotone ph-check-circle"></i>200 leads / bulan</li>
+              <li><i class="ms ph-duotone ph-check-circle"></i><b>Chat unlimited</b> (unlock 0 lead)</li>
+              <li><i class="ms ph-duotone ph-check-circle"></i>Support prioritas</li>
+            </ul>
+            <button class="btn btn-outline btn-block" data-nav="scr-payment">Pilih Enterprise</button>
+          </div>
+          <div style="padding:8px 4px 20px; font-size:11.5px; color:var(--muted); line-height:1.5">Pembayaran via Midtrans Snap (VA / e-wallet / kartu). Status polling otomatis setelah bayar.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AGENT PROFILE ============ -->
+    <section class="screen" id="scr-agent-profile">
+      <div class="scroll nonav">
+        <div class="pager g1" style="height:190px"><i class="ms ph-fill ph-seal-check"></i>
+          <div class="appbar" style="position:absolute; top:0; left:0; right:0; background:linear-gradient(rgba(13,20,30,.38),transparent)">
+            <div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div>
+            <h2 style="color:#fff">Profil Agen</h2>
+            <div class="back" data-toast="Edit profil agen (PATCH /api/agent/profile)"><i class="ms ph-duotone ph-pencil-simple"></i></div>
+          </div>
+        </div>
+        <div class="detail-body" style="padding-top:14px">
+          <div style="display:flex; gap:14px; align-items:center">
+            <div class="avatar lg" style="margin-top:-36px; border:4px solid #fff; background:#fff; color:var(--primary-dark); box-shadow:var(--shadow)">RH</div>
+            <div style="flex:1">
+              <h2 style="font-size:19px">Rian Hidayat</h2>
+              <p style="font-size:12px; color:var(--muted)">agen-nusantara · lapakhunian.com/agen/agen-nusantara</p>
+            </div>
+            <span class="badge b-pro">PRO</span>
+          </div>
+          <div class="statrow" style="margin-top:18px">
+            <div class="stat"><b>4.8<span style="font-size:12px; color:#f59e0b"> ★</span></b><span>127 ulasan</span></div>
+            <div class="stat"><b>32</b><span>Listing Aktif</span></div>
+            <div class="stat"><b>96%</b><span>Resp. Rate</span></div>
+          </div>
+          <div class="section" style="padding:0; margin-top:18px">
+            <div class="sechead"><h3 style="font-size:16px">Tentang</h3></div>
+            <p class="desc">Agen properti fokus area Bekasi & Jakarta Timur sejak 2019. Spesialis rumah second cluster dan ruko investasi. Respons cepat jam kerja 08.00–20.00.</p>
+          </div>
+          <div class="section" style="padding:0; margin-top:18px">
+            <div class="sechead"><h3 style="font-size:16px">Kredensial</h3></div>
+            <div class="stack" style="padding:0; margin-top:0">
+              <div class="menu-item" style="border-radius:16px; box-shadow:var(--shadow); background:#fff"><i class="ms ph-duotone ph-seal-check"></i><span>AREBI No. 21-2024-0113</span><span class="badge b-approved">VALID</span></div>
+              <div class="menu-item" style="border-radius:16px; box-shadow:var(--shadow); background:#fff; border-bottom:none"><i class="ms ph-duotone ph-building"></i><span>AGEN NUSANTARA PROPERTY</span></div>
+              <div class="menu-item" style="border-radius:16px; box-shadow:var(--shadow); background:#fff; border-bottom:none" data-toast="Video profil agen"><i class="ms ph-duotone ph-play"></i><span>Video intro agen</span><span class="ms chev">chevron_right</span></div>
+            </div>
+          </div>
+          <div class="section" style="padding:0; margin:18px 0 26px">
+            <div class="sechead"><h3 style="font-size:16px">Listing Agen (32)</h3><a>Semua</a></div>
+            <div class="stack" style="padding:0; margin-top:0">
+              <div class="listcard" data-nav="scr-detail"><div class="thumb g1"><i class="ms ph-fill ph-house-line"></i></div>
+                <div style="flex:1"><h4>Cluster Green Valley Type 250/180</h4><div class="price">Rp 1.250.000.000</div></div></div>
+              <div class="listcard" data-nav="scr-detail"><div class="thumb g6"><i class="ms ph-fill ph-house"></i></div>
+                <div style="flex:1"><h4>Rumah Type 45 Duren Sawit</h4><div class="price">Rp 720.000.000</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ COMPENSATION ============ -->
+    <section class="screen" id="scr-compensation">
+      <div class="appbar"><div class="back" data-back><i class="ms ph-duotone ph-arrow-left"></i></div><h2>Kompensasi</h2></div>
+      <div class="scroll">
+        <div class="note" style="margin:12px 24px 0"><i class="ms ph-duotone ph-info"></i><span>Kompensasi diberikan otomatis saat lead tidak valid (nomor salah / spam) atau sebagai bonus kampanye.</span></div>
+        <div class="section"><div class="sechead"><h3>Saldo Bonus</h3></div>
+          <div class="statrow" style="grid-template-columns:repeat(2,1fr)">
+            <div class="stat"><b style="color:var(--primary-dark)">+3 lead</b><span>Bonus Kompen. Lead</span></div>
+            <div class="stat"><b style="color:var(--primary-dark)">+2 slot</b><span>Bonus Slot Iklan</span></div>
+          </div>
+        </div>
+        <div class="section"><div class="sechead"><h3>Riwayat</h3></div></div>
+        <div class="stack" style="margin-top:0">
+          <div class="tx-item" style="border-radius:16px; box-shadow:var(--shadow); background:#fff; padding:14px 16px"><div class="ic ic-green" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center"><i class="ms ph-duotone ph-gift"></i></div>
+            <div class="mid"><h4>Dispute disetujui</h4><p>Lead Siti Marlina — nomor tidak aktif · 10 Nov 2026</p></div>
+            <div class="amt" style="color:var(--ok)">+1 lead</div></div>
+          <div class="tx-item" style="border-radius:16px; box-shadow:var(--shadow); background:#fff; padding:14px 16px"><div class="ic ic-blue" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center"><i class="ms ph-duotone ph-confetti"></i></div>
+            <div class="mid"><h4>Bonus kampanye listing</h4><p>Iklan tayang 30 hari berturut · 2 Nov 2026</p></div>
+            <div class="amt" style="color:var(--ok)">+2 slot</div></div>
+          <div class="tx-item" style="border-radius:16px; box-shadow:var(--shadow); background:#fff; padding:14px 16px"><div class="ic ic-amber" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center"><i class="ms ph-duotone ph-gift"></i></div>
+            <div class="mid"><h4>Lead duplikat dikompensasi</h4><p>Lead Hendra W. · 28 Okt 2026</p></div>
+            <div class="amt" style="color:var(--ok)">+2 lead</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- bottom nav -->
+    <nav class="bottomnav" id="bottomnav">
+      <div class="bn-item active" data-nav="scr-home" data-name="home"><i class="ms ph-fill ph-house" data-ph="house"></i>Beranda</div>
+      <div class="bn-item" data-nav="scr-explore" data-name="explore"><i class="ms ph-duotone ph-magnifying-glass" data-ph="magnifying-glass"></i>Jelajah</div>
+      <div class="bn-item" data-nav="scr-favorites" data-name="fav"><i class="ms ph-duotone ph-heart" data-ph="heart"></i>Favorit</div>
+      <div class="bn-item" data-nav="scr-chat-list" data-name="chat"><i class="ms ph-duotone ph-chat-circle-dots" data-ph="chat-circle-dots"></i>Chat<i class="bdg">2</i></div>
+      <div class="bn-item" data-nav="scr-profile" data-name="profile"><i class="ms ph-duotone ph-user" data-ph="user"></i>Profil</div>
+    </nav>
+
+    <!-- filter sheet -->
+    <div class="overlay" id="overlay"></div>
+    <div class="sheet" id="sheet-filter">
+      <div class="sheet-grab"></div>
+      <h3>Filter Pencarian</h3>
+      <div class="fgroup"><label>Transaksi</label>
+        <div class="chiprow fil" data-single><span class="chip on">Dijual</span><span class="chip">Disewa</span></div></div>
+      <div class="fgroup"><label>Kategori</label>
+        <div class="chiprow fil" data-single><span class="chip on">Rumah</span><span class="chip">Apartemen</span><span class="chip">Ruko</span><span class="chip">Tanah</span><span class="chip">Komersial</span></div></div>
+      <div class="fgroup"><label>Kota</label>
+        <div class="chiprow fil" data-single><span class="chip on">Kota Bekasi</span><span class="chip">Kab. Bekasi</span><span class="chip">Depok</span><span class="chip">Jakarta Timur</span><span class="chip">Semua Kota</span></div></div>
+      <div class="fgroup"><label>Kisaran Harga</label>
+        <input type="range" class="range" min="0" max="5000" value="1500">
+        <div class="range-labels"><span>Rp 0</span><span style="color:var(--primary-dark); font-weight:800">Rp 250 jt – Rp 2,5 M</span><span>Rp 5 M+</span></div></div>
+      <div class="fgroup"><label>Amenities (cocok semua)</label>
+        <div class="chiprow fil"><span class="chip on">Carport</span><span class="chip on">Taman</span><span class="chip">Kolam Renang</span><span class="chip">CCTV</span><span class="chip">Masjid</span></div></div>
+      <div style="display:flex; gap:10px; margin-top:22px">
+        <button class="btn btn-ghost" style="flex:1" id="resetfilter">Reset</button>
+        <button class="btn btn-primary" style="flex:2" id="applyfilter">Terapkan Filter</button>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"><i class="ms ph-duotone ph-check-circle"></i><span id="toastmsg">OK</span></div>
+  </div>
+
+  <aside class="panel">
+    <div class="cardp">
+      <h3><i class="ms ph-duotone ph-stack"></i><span id="pnl-title">Layar</span></h3>
+      <div class="scr-name">Sedang dilihat: <b id="pnl-name">Onboarding</b></div>
+      <div class="api" id="pnl-api">— mockup statis, data dummy —</div>
+    </div>
+    <div class="cardp">
+      <h3><i class="ms ph-duotone ph-info"></i>Cara pakai</h3>
+      <ul>
+        <li>Klik nama layar di tab atas untuk loncat cepat</li>
+        <li>Interaksi jalan: filter sheet, wizard 4 step, kirim chat, unlock lead, wizard submit</li>
+        <li>Gaya modern minimalis: soft shadow, radius besar, icon tinted, tanpa border keras</li>
+        <li>Acuan piksel untuk Compose di M1+ — bukan produk akhir</li>
+      </ul>
+    </div>
+    <div class="cardp">
+      <h3><i class="ms ph-duotone ph-path"></i>Flow inti v1</h3>
+      <ul>
+        <li><b>Buyer:</b> Home → Explore → Detail → Hubungi Agen → Chat</li>
+        <li><b>Owner:</b> Profil → Dashboard → Pasang Iklan (4 step) → Review</li>
+        <li><b>Agen:</b> Dashboard → Leads (unlock paywall) → Langganan</li>
+        <li>Paywall lead hanya terlihat agen; buyer langsung chat</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+
+<script>
+const SCREENS = {
+  'scr-onboard':['Onboarding','—'],
+  'scr-login':['Login','POST /api/auth/mobile-login → {user, sessionToken}'],
+  'scr-register':['Register','POST /api/auth/register (wajib verifikasi email)'],
+  'scr-home':['Beranda','GET /api/properties?isFeatured=true · GET /api/banners'],
+  'scr-explore':['Jelajah','GET /api/properties?search&city&category&purpose&minPrice&maxPrice&amenities&page&limit=12'],
+  'scr-detail':['Detail Properti','GET /api/properties/:id · POST /api/properties/:id/view'],
+  'scr-contact':['Hubungi Agen','POST /api/properties/:id/contact {budget,timeline,message} → conversationId'],
+  'scr-chat-list':['Daftar Chat','GET /api/chat/conversations'],
+  'scr-thread':['Chat (Buyer)','GET/POST /api/chat/messages · PATCH .../read · GET /api/realtime (SSE)'],
+  'scr-thread-agent':['Paywall (Agen)','POST /api/chat/conversations/:id/unlock → potong 1 lead'],
+  'scr-favorites':['Favorit','GET/POST/DELETE /api/favorites · cache Room offline'],
+  'scr-notif':['Notifikasi','GET /api/notifications · PATCH .../read-all'],
+  'scr-profile':['Profil','GET /user/account · PATCH /user/profile'],
+  'scr-owner':['Dashboard Owner','GET /api/properties?contactEmail=<email>'],
+  'scr-wizard':['Pasang Iklan','POST /api/upload (multipart) → POST /api/properties → PENDING'],
+  'scr-payment':['Pembayaran','POST .../renew → paymentRedirectUrl (Midtrans Snap) → polling status'],
+  'scr-submitted':['Iklan Terkirim','status: PENDING — review admin ±1×24 jam'],
+  'scr-history':['Riwayat & Transaksi','GET /api/transactions · GET /api/titip-jual'],
+  'scr-voucher':['Voucher','GET /api/vouchers/active · POST /api/vouchers/claim'],
+  'scr-agent':['Dashboard Agen','GET /api/agent/profile · GET /api/subscription'],
+  'scr-agent-leads':['Leads Agen','GET /api/leads · POST /leads/:id/pay · POST /leads/dispute'],
+  'scr-agent-plans':['Langganan Agen','GET /api/agent/plans · POST /api/agent/subscribe'],
+  'scr-agent-profile':['Profil Agen','GET/PATCH /api/agent/profile'],
+  'scr-compensation':['Kompensasi','kompensasi-leads · kompensasi-properti']
+};
+const NAV_SCREENS = ['scr-home','scr-explore','scr-favorites','scr-chat-list','scr-profile'];
+let history_stack = [];
+let current = 'scr-onboard';
+
+function show(id, push=true){
+  if(id===current) return;
+  if(push) history_stack.push(current);
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById(id).querySelector('.scroll')?.scrollTo(0,0);
+  current = id;
+  // tabs
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.scr===id));
+  // bottom nav
+  const showNav = NAV_SCREENS.includes(id);
+  const bn = document.getElementById('bottomnav');
+  bn.classList.toggle('show', showNav);
+  bn.querySelectorAll('.bn-item').forEach(i=>{
+    const active = i.dataset.name && document.getElementById(id).querySelector(`[data-navname="${i.dataset.name}"]`);
+    i.classList.toggle('active', !!active);
+    const ic = i.querySelector('.ms');
+    if(ic && ic.dataset.ph) ic.className = 'ms ' + (active ? 'ph-fill' : 'ph-duotone') + ' ph-' + ic.dataset.ph;
+  });
+  // side panel
+  const info = SCREENS[id] || ['?','—'];
+  document.getElementById('pnl-name').textContent = info[0];
+  document.getElementById('pnl-title').textContent = info[0];
+  document.getElementById('pnl-api').textContent = info[1];
+  closeSheet();
+}
+function goBack(){ const prev = history_stack.pop() || 'scr-home'; show(prev, false); }
+
+document.addEventListener('click', e=>{
+  const nav = e.target.closest('[data-nav]');
+  if(nav){ show(nav.dataset.nav); if(nav.dataset.toast) toast(nav.dataset.toast); return; }
+  const back = e.target.closest('[data-back]');
+  if(back){ goBack(); return; }
+  const sheetBtn = e.target.closest('[data-sheet]');
+  if(sheetBtn){ openSheet(sheetBtn.dataset.sheet); return; }
+  const t = e.target.closest('[data-toast]');
+  if(t){ toast(t.dataset.toast); return; }
+});
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>{ history_stack=[]; show(t.dataset.scr, false); }));
+
+/* bottom nav */
+document.querySelectorAll('.bn-item').forEach(i=>i.addEventListener('click', ()=>{ history_stack=[]; show(i.dataset.nav, false); }));
+
+/* toast */
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  document.getElementById('toastmsg').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+/* sheet */
+function openSheet(id){ document.getElementById('overlay').classList.add('open'); document.getElementById(id).classList.add('open'); }
+function closeSheet(){ document.getElementById('overlay').classList.remove('open'); document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open')); }
+document.getElementById('overlay').addEventListener('click', closeSheet);
+document.querySelectorAll('.chiprow.fil .chip').forEach(c=>c.addEventListener('click', ()=>{
+  const single = c.closest('[data-single]');
+  if(single){ single.querySelectorAll('.chip').forEach(x=>x.classList.remove('on')); }
+  c.classList.toggle('on');
+}));
+document.getElementById('applyfilter').addEventListener('click', ()=>{ closeSheet(); toast('Filter diterapkan — GET /api/properties dengan query baru'); });
+document.getElementById('resetfilter').addEventListener('click', ()=>{ document.querySelectorAll('.chiprow.fil .chip').forEach(x=>x.classList.remove('on')); toast('Filter direset'); });
+
+/* timeline chips single-select */
+document.querySelectorAll('#timeline .chip').forEach(c=>c.addEventListener('click', ()=>{
+  c.parentElement.querySelectorAll('.chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');
+}));
+
+/* role pick register */
+document.querySelectorAll('#rolepick .role-card').forEach(r=>r.addEventListener('click', ()=>{
+  document.querySelectorAll('#rolepick .role-card').forEach(x=>x.classList.remove('on')); r.classList.add('on');
+}));
+
+/* profile role switch */
+document.querySelectorAll('#roleswitch button').forEach(b=>b.addEventListener('click', ()=>{
+  document.querySelectorAll('#roleswitch button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  if(b.dataset.roleto==='agent'){ history_stack=[]; show('scr-agent', false); toast('Beralih ke Dashboard Agen'); }
+  else { history_stack=[]; show('scr-owner', false); toast('Beralih ke Dashboard Owner'); }
+}));
+
+/* chat send */
+document.getElementById('sendbtn').addEventListener('click', sendChat);
+document.getElementById('chatinput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendChat(); });
+function sendChat(){
+  const inp = document.getElementById('chatinput');
+  if(!inp.value.trim()) return;
+  const th = document.getElementById('thread');
+  const b = document.createElement('div');
+  b.className='bubble me';
+  b.innerHTML = `${inp.value.replace(/</g,'&lt;')}<time>${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</time>`;
+  th.appendChild(b); inp.value=''; th.scrollTop = th.scrollHeight;
+  setTimeout(()=>{
+    const r = document.createElement('div');
+    r.className='bubble them';
+    r.innerHTML = `Siap Pak, saya cek jadwalnya ya 🙏<time>${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</time>`;
+    th.appendChild(r); th.scrollTop = th.scrollHeight;
+  }, 900);
+}
+
+/* unlock lead */
+document.getElementById('unlockbtn')?.addEventListener('click', function(){
+  const blur = document.querySelector('#scr-thread-agent .blurtext');
+  blur.style.filter='none'; blur.style.userSelect='auto';
+  const badge = document.querySelector('#scr-thread-agent .badge');
+  badge.className='badge b-approved'; badge.textContent='TERBUKA';
+  this.outerHTML = '<button class="btn btn-primary btn-block"><i class="ms ph-duotone ph-chat-circle-dots" data-ph="chat-circle-dots"></i>Buka Chat</button>';
+  toast('Chat dibuka — saldo lead 45 → 44');
+});
+
+/* wizard */
+let wizStep = 1;
+const WIZ_MAX = 4;
+function renderWiz(){
+  document.querySelectorAll('#wiz-steps .wiz-step').forEach((s,i)=>{
+    s.classList.toggle('on', i+1===wizStep); s.classList.toggle('done', i+1<wizStep);
+  });
+  document.querySelectorAll('.wstep').forEach(s=>s.style.display = (+s.dataset.step===wizStep)?'block':'none');
+  document.getElementById('wizprev').style.visibility = wizStep===1?'hidden':'visible';
+  document.getElementById('wiznext').textContent = wizStep===WIZ_MAX?'Submit Iklan':'Lanjut';
+}
+document.getElementById('wizprev').addEventListener('click', ()=>{ if(wizStep>1){wizStep--; renderWiz();} });
+document.getElementById('wiznext').addEventListener('click', ()=>{
+  if(wizStep<WIZ_MAX){ wizStep++; renderWiz(); }
+  else { history_stack=[]; show('scr-submitted', false); toast('Iklan terkirim — status PENDING'); }
+});
+renderWiz();
+
+/* add photo demo */
+document.getElementById('addphoto')?.addEventListener('click', function(){
+  const grads=['g2','g4','g5','g6','g1','g3'];
+  const t=document.createElement('div');
+  t.className=`ph-tile ${grads[Math.floor(Math.random()*grads.length)]}`;
+  t.innerHTML='<i class="ms ph-fill ph-image"></i><div class="del"><i class="ms ph ph-x"></i></div>';
+  t.querySelector('.del').addEventListener('click', ()=>t.remove());
+  this.parentElement.insertBefore(t, this);
+  toast('Foto ditambahkan — POST /api/upload (multipart, ≤10MB)');
+});
+
+/* hearts toggle */
+document.querySelectorAll('.heart').forEach(h=>h.addEventListener('click', e=>{
+  e.stopPropagation();
+  h.classList.toggle('on');
+  const ms=h.querySelector('.ms');
+  ms.className = h.classList.contains('on') ? 'ms ph-fill ph-heart' : 'ms ph ph-heart';
+  toast(h.classList.contains('on')?'Ditambahkan ke favorit':'Dihapus dari favorit');
+}));
+
+/* onboarding slides */
+const OB = [
+  ['g1','house','Cari hunian impian<br>dengan mudah','Ribuan properti di kota Anda — rumah, apartemen, tanah, dan ruko. Filter sesuai budget dalam 2 ketukan.'],
+  ['g3','add_business','Pasang iklan<br>gratis 30 hari','Foto langsung dari galeri, form step-by-step, iklan tayang setelah review cepat. Perpanjang cuma Rp 25rb.'],
+  ['g5','chat','Chat langsung<br>aman & tercatat','Hubungi agen tanpa bocor ke spam. Riwayat chat tersimpan, notifikasi realtime saat ada balasan.']
+];
+let obIdx = 0;
+document.getElementById('ob-next').addEventListener('click', ()=>{
+  obIdx++;
+  if(obIdx >= OB.length){ show('scr-login'); return; }
+  const [g,ic,t,d] = OB[obIdx];
+  const art=document.getElementById('ob-art');
+  art.className='ob-art '+g; art.innerHTML=`<span class="ms fill">${ic}</span>`;
+  document.getElementById('ob-title').innerHTML=t;
+  document.getElementById('ob-desc').textContent=d;
+  document.querySelectorAll('#ob-dots i').forEach((d2,i2)=>d2.classList.toggle('on', i2===obIdx));
+  if(obIdx===OB.length-1) document.getElementById('ob-next').textContent='Mulai Sekarang';
+});
+</script>
+</body>
+</html>

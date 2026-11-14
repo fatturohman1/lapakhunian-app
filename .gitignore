@@ -1,0 +1,23 @@
+*.iml
+.gradle
+/local.properties
+.idea
+.DS_Store
+build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/build
+
+# Keystore signing — JANGAN pernah masuk git
+*.jks
+*.keystore
+lapakhunian.keystore
+
+# Log & file lokal
+*.log
+.kotlin/
+
+# Tooling lokal (agent session)
+.zcode/
