@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,18 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+}
+
+// Signing release — keystore/password dibaca dari local.properties (tidak pernah di-commit).
+// Properti yang diharapkan:
+//   RELEASE_STORE_FILE      (relatif ke root project, cth: lapakhunian.keystore)
+//   RELEASE_STORE_PASSWORD
+//   RELEASE_KEY_ALIAS
+//   RELEASE_KEY_PASSWORD
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("local.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
 android {
@@ -16,7 +30,7 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0.0"
+        versionName = "1.0.0-beta.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
@@ -28,6 +42,19 @@ android {
         // Diisi dari gradle.properties → GOOGLE_WEB_CLIENT_ID (bukan secret, tapi jangan hardcode).
         val googleWebClientId = (project.findProperty("GOOGLE_WEB_CLIENT_ID") as String?) ?: ""
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            val storeFileProp = keystoreProperties.getProperty("RELEASE_STORE_FILE")
+            val storePass = keystoreProperties.getProperty("RELEASE_STORE_PASSWORD")
+            if (storeFileProp != null && storePass != null && rootProject.file(storeFileProp).exists()) {
+                storeFile = rootProject.file(storeFileProp)
+                storePassword = storePass
+                keyAlias = keystoreProperties.getProperty("RELEASE_KEY_ALIAS") ?: "lapakhunian"
+                keyPassword = keystoreProperties.getProperty("RELEASE_KEY_PASSWORD") ?: storePass
+            }
+        }
     }
 
     buildTypes {
@@ -45,6 +72,18 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // signed hanya bila keystore tersedia di local.properties; tanpa itu → unsigned
+            val hasSigning = keystoreProperties.getProperty("RELEASE_STORE_FILE")?.let { rootProject.file(it).exists() } == true
+            if (hasSigning) signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    // Nama file APK tetap di semua rilis — release → lapakhunian-beta.apk
+    applicationVariants.all {
+        if (buildType.name == "release") {
+            outputs.all {
+                (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "lapakhunian-beta.apk"
+            }
         }
     }
 
