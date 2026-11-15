@@ -34,6 +34,8 @@ import com.lapakhunian.app.core.designsystem.TintGreen
 import com.lapakhunian.app.feature.auth.LoginScreen
 import com.lapakhunian.app.feature.auth.RegisterScreen
 import com.lapakhunian.app.feature.auth.RolePickerScreen
+import com.lapakhunian.app.feature.home.TitipJualScreen
+import com.lapakhunian.app.feature.settings.ChangePasswordScreen
 import com.lapakhunian.app.feature.dashboard.AgentDashboardScreen
 import com.lapakhunian.app.feature.dashboard.AgentLeadsScreen
 import com.lapakhunian.app.feature.dashboard.AgentPlansScreen
@@ -77,6 +79,8 @@ object Routes {
     const val CONTACT = "contact/{propertyId}"
     const val THREAD = "thread/{conversationId}"
     const val ROLE_PICKER = "role-picker"
+    const val UBAH_PASSWORD = "ubah-password"
+    const val TITIP_JUAL = "titip-jual"
 }
 
 @HiltViewModel
@@ -110,7 +114,7 @@ private fun LaunchedEffectOnce(key: Any? = Unit, block: suspend () -> Unit) {
 }
 
 @Composable
-fun AppRoot(initialOpenChat: Boolean = false) {
+fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = null) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -118,6 +122,11 @@ fun AppRoot(initialOpenChat: Boolean = false) {
     // Tap notifikasi chat → langsung ke tab Chat
     LaunchedEffect(initialOpenChat) {
         if (initialOpenChat) navController.navigate(Routes.CHAT)
+    }
+
+    // App Links (share link /properti/{slug} dibuka dari luar app)
+    LaunchedEffect(initialPropertySlug) {
+        if (initialPropertySlug != null) navController.navigate("detail/$initialPropertySlug")
     }
 
     Scaffold(
@@ -176,6 +185,7 @@ fun AppRoot(initialOpenChat: Boolean = false) {
                     onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
                     onOpenCity = { city -> navController.navigate("explore?city=$city") },
+                    onOpenTitipJual = { navController.navigate(Routes.TITIP_JUAL) },
                 )
             }
             composable(
@@ -226,14 +236,24 @@ fun AppRoot(initialOpenChat: Boolean = false) {
                 )
             }
             composable("help") {
-                HelpScreen(onBack = { navController.popBackStack() })
+                HelpScreen(
+                    onBack = { navController.popBackStack() },
+                    onGoLogin = { navController.navigate(Routes.LOGIN) },
+                )
             }
             composable("settings") {
                 SettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenPrivacy = { navController.navigate("privacy") },
                     onOpenTerms = { navController.navigate("terms") },
+                    onOpenChangePassword = { navController.navigate(Routes.UBAH_PASSWORD) },
                 )
+            }
+            composable(Routes.UBAH_PASSWORD) {
+                ChangePasswordScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.TITIP_JUAL) {
+                TitipJualScreen(onBack = { navController.popBackStack() })
             }
             composable("privacy") {
                 PrivacyPolicyScreen(onBack = { navController.popBackStack() })

@@ -35,9 +35,13 @@ class MainActivity : ComponentActivity() {
         )
         // Tap notifikasi chat → langsung buka tab Chat
         val openChat = intent?.getBooleanExtra(LocalNotifier.EXTRA_OPEN_CHAT, false) == true
+        // App Links: https://lapakhunian.com/properti/{slug} dari share link
+        val propertySlug = intent?.data?.takeIf {
+            it.host == "lapakhunian.com" && it.pathSegments?.firstOrNull() == "properti"
+        }?.lastPathSegment
         setContent {
             LapakHunianTheme {
-                AppRoot(initialOpenChat = openChat)
+                AppRoot(initialOpenChat = openChat, initialPropertySlug = propertySlug)
             }
         }
     }

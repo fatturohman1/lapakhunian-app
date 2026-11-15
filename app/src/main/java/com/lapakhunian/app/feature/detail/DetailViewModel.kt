@@ -20,6 +20,7 @@ data class DetailUiState(
     val property: Property? = null,
     val error: String? = null,
     val isFavorite: Boolean = false,
+    val reporting: Boolean = false,
 )
 
 @HiltViewModel
@@ -33,6 +34,24 @@ class DetailViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(DetailUiState())
     val state: StateFlow<DetailUiState> = _state.asStateFlow()
+
+    /** Lapor properti palsu/menyesatkan — guest → error "Harap login" dari repository. */
+    fun reportProperty(reason: String, onDone: (Result<Unit>) -> Unit) {
+        if (_state.value.reporting) return
+        _state.update { it.copy(reporting = true) }
+        viewModelScope.launch {
+            repo.reportProperty(propertyId, reason.trim()).fold(
+                onSuccess = {
+                    _state.update { it.copy(reporting = false) }
+                    onDone(Result.success(Unit))
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(reporting = false) }
+                    onDone(Result.failure(e))
+                },
+            )
+        }
+    }
 
     init {
         viewModelScope.launch {

@@ -23,12 +23,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,6 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -75,6 +79,8 @@ fun DetailScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val property = state.property
+    var showReport by remember { mutableStateOf(false) }
+    var reportReason by remember { mutableStateOf("") }
     val onShare: (() -> Unit)? = property?.let { p ->
         {
             // web membuka detail lewat slug: /properti/[slug] — id saja 404
@@ -447,6 +453,60 @@ fun DetailScreen(
             isFavorite = state.isFavorite,
             onFavoriteClick = { viewModel.toggleFavorite { onGoLogin() } },
             onShare = onShare,
+            onReport = {
+                showReport = true
+            },
+        )
+    }
+
+    // Dialog lapor properti
+    if (showReport) {
+        AlertDialog(
+            onDismissRequest = { showReport = false },
+            title = { Text("Lapor properti ini?", fontWeight = FontWeight.W800) },
+            text = {
+                Column {
+                    Text(
+                        "Laporkan iklan palsu/menyesatkan — direview admin.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MutedGray,
+                    )
+                    OutlinedTextField(
+                        value = reportReason,
+                        onValueChange = { reportReason = it },
+                        label = { Text("Alasan (min. 10 karakter)") },
+                        minLines = 2,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = reportReason.trim().length >= 10 && !state.reporting,
+                    onClick = {
+                        viewModel.reportProperty(reportReason) { res ->
+                            showReport = false
+                            reportReason = ""
+                            res.fold(
+                                onSuccess = {
+                                    Toast.makeText(context, "Laporan terkirim — terima kasih", Toast.LENGTH_LONG).show()
+                                },
+                                onFailure = { e ->
+                                    if (e.message?.contains("login", ignoreCase = true) == true) {
+                                        onGoLogin()
+                                    } else {
+                                        Toast.makeText(context, e.message ?: "Gagal mengirim laporan", Toast.LENGTH_LONG).show()
+                                    }
+                                },
+                            )
+                        }
+                    },
+                ) { Text("Kirim") }
+            },
+            dismissButton = { TextButton(onClick = { showReport = false }) { Text("Batal") } },
         )
     }
 }
@@ -457,6 +517,7 @@ private fun TopBarOverlay(
     isFavorite: Boolean = false,
     onFavoriteClick: (() -> Unit)? = null,
     onShare: (() -> Unit)? = null,
+    onReport: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
@@ -474,6 +535,17 @@ private fun TopBarOverlay(
             PhIcon(AppIcons.Back, contentDescription = "Kembali", tint = Color(0xFF101828), modifier = Modifier.size(20.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (onReport != null) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(Color.White, CircleShape)
+                        .clickable(onClick = onReport),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PhIcon(AppIcons.Flag, contentDescription = "Lapor properti", tint = Color(0xFF101828), modifier = Modifier.size(20.dp))
+                }
+            }
             if (onShare != null) {
                 Box(
                     modifier = Modifier

@@ -50,6 +50,7 @@ import com.lapakhunian.app.core.designsystem.AmberWarning
 import com.lapakhunian.app.core.designsystem.AppIcons
 import com.lapakhunian.app.core.designsystem.MutedGray
 import com.lapakhunian.app.core.designsystem.PrimaryDark
+import com.lapakhunian.app.core.designsystem.TintGreen
 import com.lapakhunian.app.core.designsystem.components.EmptyState
 import com.lapakhunian.app.core.designsystem.components.LapakSearchBar
 import com.lapakhunian.app.core.designsystem.components.PropertyCardSkeleton
@@ -85,6 +86,7 @@ fun HomeScreen(
     onOpenNotifications: () -> Unit,
     onGoLogin: () -> Unit = {},
     onOpenCity: (String) -> Unit = {},
+    onOpenTitipJual: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -160,6 +162,37 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+
+            // CTA titip jual — konsinyasi publik tanpa login
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 14.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(TintGreen)
+                    .clickable(onClick = onOpenTitipJual)
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PhIcon(AppIcons.Sell, tint = PrimaryDark, size = 22.dp)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 12.dp),
+                ) {
+                    Text(
+                        "Punya properti mau dijual?",
+                        fontWeight = FontWeight.W800,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Text(
+                        "Titip jual — tim kami survei & pasarkan",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MutedGray,
+                    )
+                }
+                PhIcon(AppIcons.Chevron, tint = MutedGray, size = 16.dp)
             }
 
             if (state.loading && state.featured.isEmpty() && state.latest.isEmpty()) {

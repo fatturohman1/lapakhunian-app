@@ -192,6 +192,64 @@ class PropertyRepository @Inject constructor(
         Unit
     }
 
+    // ===== Pengaturan akun =====
+
+    /** Ganti password akun email — currentPassword wajib kecuali akun Google (tanpa password). */
+    suspend fun changePassword(currentPassword: String?, newPassword: String): Result<Unit> =
+        runCatching {
+            withFriendlyErrors {
+                val res = api.changePassword(currentPassword, newPassword)
+                if (!res.success) throw ApiException(res.error ?: "Gagal mengubah password")
+                Unit
+            }
+        }
+
+    // ===== Tiket bantuan =====
+
+    suspend fun supportTickets(): Result<List<com.lapakhunian.app.core.network.dto.SupportTicketDto>> =
+        runCatching {
+            if (session.tokenFlow.value == null) throw ApiException("Harap login terlebih dahulu")
+            val res = api.supportTickets()
+            if (!res.success) throw ApiException(res.error ?: "Gagal memuat tiket")
+            res.data.orEmpty()
+        }
+
+    suspend fun createSupportTicket(subject: String, message: String): Result<Unit> = runCatching {
+        withFriendlyErrors {
+            if (session.tokenFlow.value == null) throw ApiException("Harap login terlebih dahulu")
+            val res = api.createSupportTicket(subject, message)
+            if (!res.success) throw ApiException(res.error ?: "Gagal mengirim tiket")
+            Unit
+        }
+    }
+
+    // ===== Lapor properti =====
+
+    suspend fun reportProperty(propertyId: String, reason: String): Result<Unit> = runCatching {
+        withFriendlyErrors {
+            if (session.tokenFlow.value == null) throw ApiException("Harap login terlebih dahulu")
+            val res = api.reportProperty(propertyId, reason)
+            if (!res.success) throw ApiException(res.error ?: "Gagal mengirim laporan")
+            Unit
+        }
+    }
+
+    // ===== Titip jual (konsinyasi — publik tanpa login) =====
+
+    suspend fun submitTitipJual(
+        name: String,
+        phone: String,
+        propertyTitle: String,
+        address: String,
+        estimatedPrice: String,
+    ): Result<Unit> = runCatching {
+        withFriendlyErrors {
+            val res = api.titipJual(name, phone, propertyTitle, address, estimatedPrice)
+            if (!res.success) throw ApiException(res.error ?: "Gagal mengirim data")
+            Unit
+        }
+    }
+
     /** Logout: bersihkan cache properti (biar user berikutnya tidak lihat cache user lama) + sesi. */
     suspend fun logout() {
         // hapus registrasi push device ini dulu (server berhenti kirim push ke user lama)

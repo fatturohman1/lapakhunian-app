@@ -19,6 +19,7 @@ import com.lapakhunian.app.core.network.dto.SubscriptionDto
 import com.lapakhunian.app.core.network.dto.TransactionDto
 import com.lapakhunian.app.core.network.dto.UploadResponse
 import com.lapakhunian.app.core.network.dto.UserDto
+import kotlinx.serialization.json.JsonElement
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
@@ -346,5 +347,60 @@ class PropertyApi @Inject constructor(
         client.delete("$baseUrl/api/notifications/device-token") {
             contentType(ContentType.Application.Json)
             setBody(mapOf("token" to token))
+        }.body()
+
+    // ===== Pengaturan akun =====
+
+    /** PATCH /api/user/password — currentPassword opsional (akun Google tanpa password). */
+    suspend fun changePassword(currentPassword: String?, newPassword: String): ApiEnvelope<Unit?> =
+        client.patch("$baseUrl/api/user/password") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                buildMap<String, String> {
+                    currentPassword?.takeIf { it.isNotBlank() }?.let { put("currentPassword", it) }
+                    put("newPassword", newPassword)
+                },
+            )
+        }.body()
+
+    // ===== Tiket bantuan =====
+
+    suspend fun supportTickets(): ApiEnvelope<List<com.lapakhunian.app.core.network.dto.SupportTicketDto>> =
+        client.get("$baseUrl/api/support/tickets").body()
+
+    suspend fun createSupportTicket(subject: String, message: String): ApiEnvelope<JsonElement?> =
+        client.post("$baseUrl/api/support/tickets") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("subject" to subject, "message" to message))
+        }.body()
+
+    // ===== Lapor properti =====
+
+    suspend fun reportProperty(propertyId: String, reason: String): ApiEnvelope<JsonElement?> =
+        client.post("$baseUrl/api/properties/$propertyId/report") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("reason" to reason))
+        }.body()
+
+    // ===== Titip jual (konsinyasi — form publik tanpa login) =====
+
+    suspend fun titipJual(
+        name: String,
+        phone: String,
+        propertyTitle: String,
+        address: String,
+        estimatedPrice: String,
+    ): ApiEnvelope<JsonElement?> =
+        client.post("$baseUrl/api/titip-jual") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                mapOf(
+                    "name" to name,
+                    "phone" to phone,
+                    "propertyTitle" to propertyTitle,
+                    "address" to address,
+                    "estimatedPrice" to estimatedPrice,
+                ),
+            )
         }.body()
 }

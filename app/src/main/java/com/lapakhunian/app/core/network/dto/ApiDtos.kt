@@ -31,6 +31,16 @@ data class BannerDto(
     val position: String? = null,
 )
 
+/** Tiket bantuan milik user (GET /api/support/tickets). */
+@Serializable
+data class SupportTicketDto(
+    val id: String? = null,
+    val subject: String? = null,
+    val message: String? = null,
+    val status: String? = null,
+    val createdAt: String? = null,
+)
+
 @Serializable
 data class PropertyDto(
     val id: String? = null,

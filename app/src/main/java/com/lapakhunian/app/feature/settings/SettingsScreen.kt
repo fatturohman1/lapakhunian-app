@@ -39,6 +39,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenTerms: () -> Unit,
+    onOpenChangePassword: () -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -71,6 +72,7 @@ fun SettingsScreen(
         }
 
         SettingGroup {
+            SettingRow(AppIcons.Lock, "Ubah Password", "Khusus akun email — Google tak perlu", onClick = onOpenChangePassword)
             SettingRow(AppIcons.Shield, "Kebijakan Privasi", onClick = onOpenPrivacy)
             SettingRow(AppIcons.Info, "Syarat & Ketentuan", onClick = onOpenTerms)
             SettingRow(AppIcons.Star, "Beri Penilaian", "Bantu kami berkembang di Play Store") {
