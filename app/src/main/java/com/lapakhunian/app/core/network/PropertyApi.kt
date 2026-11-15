@@ -384,23 +384,28 @@ class PropertyApi @Inject constructor(
 
     // ===== Titip jual (konsinyasi — form publik tanpa login) =====
 
-    suspend fun titipJual(
-        name: String,
-        phone: String,
-        propertyTitle: String,
-        address: String,
-        estimatedPrice: String,
-    ): ApiEnvelope<JsonElement?> =
+    suspend fun titipJual(body: com.lapakhunian.app.core.network.dto.TitipJualRequest): ApiEnvelope<JsonElement?> =
         client.post("$baseUrl/api/titip-jual") {
             contentType(ContentType.Application.Json)
-            setBody(
-                mapOf(
-                    "name" to name,
-                    "phone" to phone,
-                    "propertyTitle" to propertyTitle,
-                    "address" to address,
-                    "estimatedPrice" to estimatedPrice,
-                ),
-            )
+            setBody(body)
         }.body()
+
+    /** Upload foto titip jual (endpoint PUBLIK — tanpa login; rate limit di server). */
+    suspend fun titipJualUploadPhoto(bytes: ByteArray, filename: String, mime: String): UploadResponse {
+        // multipart manual — lihat uploadImage() untuk alasannya
+        val boundary = "lapakhunian-${java.util.UUID.randomUUID().toString().replace("-", "")}"
+        val head = (
+            "--$boundary\r\n" +
+                "Content-Disposition: form-data; name=\"file\"; filename=\"$filename\"\r\n" +
+                "Content-Type: $mime\r\n" +
+                "\r\n"
+            ).toByteArray(Charsets.UTF_8)
+        val tail = "\r\n--$boundary--\r\n".toByteArray(Charsets.UTF_8)
+        val body = head + bytes + tail
+
+        return client.post("$baseUrl/api/titip-jual/upload") {
+            header(HttpHeaders.ContentType, "multipart/form-data; boundary=$boundary")
+            setBody(body)
+        }.body()
+    }
 }

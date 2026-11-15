@@ -41,6 +41,17 @@ data class SupportTicketDto(
     val createdAt: String? = null,
 )
 
+/** Body POST /api/titip-jual — typed (jangan Map<String, Any?>: List<String> dalam map heterogen gagal diserialisasi kotlinx). */
+@Serializable
+data class TitipJualRequest(
+    val name: String,
+    val phone: String,
+    val propertyTitle: String,
+    val address: String,
+    val estimatedPrice: String,
+    val photos: List<String> = emptyList(),
+)
+
 @Serializable
 data class PropertyDto(
     val id: String? = null,

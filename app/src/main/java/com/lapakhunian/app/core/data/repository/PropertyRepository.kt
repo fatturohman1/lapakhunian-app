@@ -236,15 +236,33 @@ class PropertyRepository @Inject constructor(
 
     // ===== Titip jual (konsinyasi — publik tanpa login) =====
 
+    /** Upload foto titip jual — endpoint publik, rate limit di server (5/15 menit/IP). */
+    suspend fun titipJualUploadPhoto(bytes: ByteArray, filename: String, mime: String): Result<String> =
+        runCatching {
+            val res = api.titipJualUploadPhoto(bytes, filename, mime)
+            if (!res.success) throw ApiException(res.error ?: "Upload foto gagal")
+            res.url ?: throw ApiException("Upload gagal: URL kosong")
+        }
+
     suspend fun submitTitipJual(
         name: String,
         phone: String,
         propertyTitle: String,
         address: String,
         estimatedPrice: String,
+        photos: List<String> = emptyList(),
     ): Result<Unit> = runCatching {
         withFriendlyErrors {
-            val res = api.titipJual(name, phone, propertyTitle, address, estimatedPrice)
+            val res = api.titipJual(
+                com.lapakhunian.app.core.network.dto.TitipJualRequest(
+                    name = name,
+                    phone = phone,
+                    propertyTitle = propertyTitle,
+                    address = address,
+                    estimatedPrice = estimatedPrice,
+                    photos = photos,
+                ),
+            )
             if (!res.success) throw ApiException(res.error ?: "Gagal mengirim data")
             Unit
         }
