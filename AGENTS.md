@@ -42,6 +42,11 @@ git tag v<versi> && git push origin v<versi>
   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` (dipakai job sign di android.yml).
 - `GOOGLE_WEB_CLIENT_ID` ada di `gradle.properties` (bukan secret; embedded di APK itu wajar).
   Ini client **Web** OAuth — jangan diganti client Android.
+- Firebase (`lapakhunian-e4654`): `app/google-services.json` **boleh di-commit**
+  (bukan secret; CI release butuh). Service account json (`*firebase-adminsdk*.json`)
+  = **SECRET, gitignored, tidak pernah di-commit** — nilainya hidup di env Coolify
+  repo hously (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`);
+  env kosong → server skip push diam-diam (app tetap jalan).
 
 ## Jebakan CI yang pernah terjadi (jangan diulang)
 - `gradlew` WAJIB executable di git (`git update-index --chmod=+x gradlew`) — commit dari
@@ -57,6 +62,10 @@ git tag v<versi> && git push origin v<versi>
   yang gagal login Google = SHA-1 release belum terdaftar.
 
 ## Catatan fitur penting (konteks singkat)
+- Notifikasi: FCM (`FcmService`, data payload `{title, body}`) + fallback polling
+  WorkManager 15 menit (`ChatNotificationWorker`). Token per device via
+  `POST /api/notifications/device-token` (logout → DELETE). Snapshot unread di
+  `NotificationPrefs` disync ChatListViewModel + worker supaya tak ada notif ganda.
 - Kontak pembeli TANPA login: `POST /api/properties/{id}/guest-contact` (nama + WA) —
   endpoint publik web; lead tetap kena paywall unlock di sisi agen.
 - Favorit: respons `/api/favorites` berbentuk nested `{ id, property: {...} }` —
