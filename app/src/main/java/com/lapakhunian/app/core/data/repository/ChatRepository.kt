@@ -28,6 +28,10 @@ class ChatRepository @Inject constructor(
         envelope { api.conversations() }.getOrThrow()
     }
 
+    /** Snapshot percakapan sekali baca — dipakai worker notifikasi background. */
+    suspend fun conversationsOnce(): List<ConversationDto> =
+        envelope { api.conversations() }.getOrThrow()
+
     fun messages(conversationId: String): Flow<Result<MessagesEnvelope>> = polled {
         api.messages(conversationId)
     }
@@ -59,6 +63,13 @@ class ChatRepository @Inject constructor(
     suspend fun markAllNotificationsRead(): Result<Unit> = runCatching {
         api.markAllNotificationsRead()
         Unit
+    }
+
+    /** Laporkan lead invalid (agen) → kembalikan pesan server (estimasi review 1x24 jam). */
+    suspend fun disputeLead(conversationId: String, reason: String): Result<String> = runCatching {
+        val res = api.disputeLead(conversationId, reason)
+        if (!res.success) throw ApiException(res.error ?: "Gagal mengirim laporan")
+        res.message ?: "Laporan terkirim"
     }
 }
 

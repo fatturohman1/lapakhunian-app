@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lapakhunian.app.core.data.repository.PropertyRepository
 import com.lapakhunian.app.core.data.session.SessionManager
 import com.lapakhunian.app.core.domain.model.Property
+import com.lapakhunian.app.core.network.dto.BannerDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,8 @@ data class HomeUiState(
     val featured: List<Property> = emptyList(),
     val latest: List<Property> = emptyList(),
     val offline: Boolean = false,
+    /** Banner promo aktif dari admin (position "homepage") — kosong → strip tak tampil. */
+    val banners: List<BannerDto> = emptyList(),
 )
 
 @HiltViewModel
@@ -41,6 +44,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val featured = repo.featured(6)
             val latest = repo.latest(4)
+            val banners = repo.activeBanners()
             val offline = featured.isEmpty() && latest.isEmpty()
             _state.update {
                 it.copy(
@@ -48,6 +52,7 @@ class HomeViewModel @Inject constructor(
                     featured = featured,
                     latest = latest,
                     offline = offline,
+                    banners = banners,
                 )
             }
             if (session.tokenFlow.first() != null) {

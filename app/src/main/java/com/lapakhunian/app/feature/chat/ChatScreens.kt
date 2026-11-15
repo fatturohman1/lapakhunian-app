@@ -18,14 +18,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,9 +53,11 @@ import com.lapakhunian.app.core.designsystem.components.InitialAvatar
 import com.lapakhunian.app.core.designsystem.PhIcon
 import com.lapakhunian.app.core.network.dto.ConversationDto
 import com.lapakhunian.app.core.network.dto.LeadWaDto
+import com.lapakhunian.app.core.util.RoleHolder
 import com.lapakhunian.app.core.util.toWaNumber
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -321,6 +329,9 @@ fun ThreadScreen(
     viewModel: ThreadViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    var showDispute by remember { mutableStateOf(false) }
+    var disputeReason by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -349,6 +360,17 @@ fun ThreadScreen(
                 )
                 if (state.conversation?.online == true) {
                     Text("Online", style = MaterialTheme.typography.labelSmall, color = Color(0xFF15803D), fontWeight = FontWeight.W700)
+                }
+            }
+            // Lead dispute — hanya agen & chat sudah terbuka (lead terpakai)
+            if (RoleHolder.role == "agent" && !state.locked) {
+                androidx.compose.material3.IconButton(onClick = { showDispute = true }) {
+                    PhIcon(
+                        AppIcons.Flag,
+                        contentDescription = "Laporkan lead invalid",
+                        tint = MutedGray,
+                        modifier = Modifier.size(20.dp),
+                    )
                 }
             }
         }
@@ -449,6 +471,54 @@ fun ThreadScreen(
                 )
             }
         }
+    }
+
+    // Dialog lead dispute
+    if (showDispute) {
+        AlertDialog(
+            onDismissRequest = { showDispute = false },
+            title = { Text("Laporkan lead invalid?", fontWeight = FontWeight.W800) },
+            text = {
+                Column {
+                    Text(
+                        "Laporan direview admin dalam 1×24 jam. Bila disetujui, lead dikembalikan (refund).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MutedGray,
+                    )
+                    OutlinedTextField(
+                        value = disputeReason,
+                        onValueChange = { disputeReason = it },
+                        label = { Text("Alasan (mis. nomor salah, tidak serius)") },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = disputeReason.isNotBlank() && !state.disputing,
+                    onClick = {
+                        viewModel.disputeLead(disputeReason) { res ->
+                            showDispute = false
+                            disputeReason = ""
+                            Toast.makeText(
+                                context,
+                                res.fold(
+                                    { it },
+                                    { e -> e.message ?: "Gagal mengirim laporan" },
+                                ),
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    },
+                ) { Text("Kirim") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDispute = false }) { Text("Batal") }
+            },
+        )
     }
 }
 

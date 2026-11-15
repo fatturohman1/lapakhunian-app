@@ -66,6 +66,8 @@ import kotlinx.coroutines.launch
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onGoRegister: () -> Unit,
+    /** Akun Google baru belum pilih role (owner/agent) → arahkan ke role picker. */
+    onNeedsRoleSelection: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -241,7 +243,13 @@ fun LoginScreen(
                         } else {
                             viewModel.loginWithGoogle(idToken) { ok ->
                                 googleLoading = false
-                                if (ok) onLoginSuccess()
+                                if (ok) {
+                                    if (viewModel.state.value.needsRoleSelection) {
+                                        onNeedsRoleSelection()
+                                    } else {
+                                        onLoginSuccess()
+                                    }
+                                }
                             }
                         }
                     }

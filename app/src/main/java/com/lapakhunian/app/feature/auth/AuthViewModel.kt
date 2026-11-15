@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lapakhunian.app.core.data.repository.ApiException
 import com.lapakhunian.app.core.data.repository.PropertyRepository
+import com.lapakhunian.app.core.notifications.NotificationPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,15 +17,25 @@ data class AuthUiState(
     val loading: Boolean = false,
     val error: String? = null,
     val registerSuccess: Boolean = false,
+    /** Akun Google baru yang belum pilih role → UI navigasi ke role picker. */
+    val needsRoleSelection: Boolean = false,
 )
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val repo: PropertyRepository,
+    private val notifPrefs: NotificationPrefs,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
+
+    /** Registrasi token FCM buffer ke server setelah sesi tersimpan — non-kritis. */
+    private fun registerPushToken() {
+        notifPrefs.fcmToken?.let { token ->
+            viewModelScope.launch { repo.registerDeviceToken(token) }
+        }
+    }
 
     fun login(email: String, password: String, onSuccess: () -> Unit) {
         if (email.isBlank() || password.isBlank()) {
@@ -36,6 +47,7 @@ class AuthViewModel @Inject constructor(
             repo.login(email.trim(), password).fold(
                 onSuccess = {
                     _state.update { it.copy(loading = false, error = null) }
+                    registerPushToken()
                     onSuccess()
                 },
                 onFailure = { e ->
@@ -49,13 +61,21 @@ class AuthViewModel @Inject constructor(
     fun setError(message: String) = _state.update { it.copy(error = message) }
 
     /** Google Sign-In: idToken dari Credential Manager → POST /api/auth/mobile-google-login.
-     *  onDone(true) bila sukses; gagal → state.error berisi pesan ramah + onDone(false). */
+     *  onDone(true) bila sukses; gagal → state.error berisi pesan ramah + onDone(false).
+     *  Akun Google baru (belum pilih role) → state.needsRoleSelection = true. */
     fun loginWithGoogle(idToken: String, onDone: (Boolean) -> Unit) {
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             repo.googleLogin(idToken).fold(
-                onSuccess = {
-                    _state.update { it.copy(loading = false, error = null) }
+                onSuccess = { outcome ->
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            error = null,
+                            needsRoleSelection = outcome.needsOnboarding,
+                        )
+                    }
+                    registerPushToken()
                     onDone(true)
                 },
                 onFailure = { e ->

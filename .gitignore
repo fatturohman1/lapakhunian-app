@@ -15,6 +15,10 @@ local.properties
 *.keystore
 lapakhunian.keystore
 
+# Firebase service account (private key) — JANGAN pernah masuk git
+lapakhunian-*-firebase-adminsdk-*.json
+*firebase-adminsdk*.json
+
 # Log & file lokal
 *.log
 .kotlin/

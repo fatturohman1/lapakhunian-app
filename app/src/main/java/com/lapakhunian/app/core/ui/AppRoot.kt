@@ -33,6 +33,7 @@ import com.lapakhunian.app.core.designsystem.PrimaryDark
 import com.lapakhunian.app.core.designsystem.TintGreen
 import com.lapakhunian.app.feature.auth.LoginScreen
 import com.lapakhunian.app.feature.auth.RegisterScreen
+import com.lapakhunian.app.feature.auth.RolePickerScreen
 import com.lapakhunian.app.feature.dashboard.AgentDashboardScreen
 import com.lapakhunian.app.feature.dashboard.AgentLeadsScreen
 import com.lapakhunian.app.feature.dashboard.AgentPlansScreen
@@ -75,6 +76,7 @@ object Routes {
     const val REGISTER = "register"
     const val CONTACT = "contact/{propertyId}"
     const val THREAD = "thread/{conversationId}"
+    const val ROLE_PICKER = "role-picker"
 }
 
 @HiltViewModel
@@ -108,10 +110,15 @@ private fun LaunchedEffectOnce(key: Any? = Unit, block: suspend () -> Unit) {
 }
 
 @Composable
-fun AppRoot() {
+fun AppRoot(initialOpenChat: Boolean = false) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+
+    // Tap notifikasi chat → langsung ke tab Chat
+    LaunchedEffect(initialOpenChat) {
+        if (initialOpenChat) navController.navigate(Routes.CHAT)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -428,7 +435,15 @@ fun AppRoot() {
                 LoginScreen(
                     onLoginSuccess = { navController.popBackStack() },
                     onGoRegister = { navController.navigate(Routes.REGISTER) },
+                    onNeedsRoleSelection = {
+                        navController.navigate(Routes.ROLE_PICKER) {
+                            popUpTo(Routes.LOGIN) { inclusive = true }
+                        }
+                    },
                 )
+            }
+            composable(Routes.ROLE_PICKER) {
+                RolePickerScreen(onDone = { navController.popBackStack() })
             }
             composable(Routes.REGISTER) {
                 RegisterScreen(

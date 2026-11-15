@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.lapakhunian.app.core.data.repository.ChatRepository
 import com.lapakhunian.app.core.data.repository.DashboardRepository
 import com.lapakhunian.app.core.data.session.SessionManager
+import com.lapakhunian.app.core.notifications.NotificationPrefs
 import com.lapakhunian.app.core.network.dto.ConversationDto
 import com.lapakhunian.app.core.network.dto.LeadWaDto
 import com.lapakhunian.app.core.network.dto.MessageDto
@@ -42,6 +43,7 @@ class ChatListViewModel @Inject constructor(
     private val repo: ChatRepository,
     private val dashboardRepo: DashboardRepository,
     private val session: SessionManager,
+    private val notifPrefs: NotificationPrefs,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatListUiState())
@@ -74,6 +76,9 @@ class ChatListViewModel @Inject constructor(
                 val waLeads = dashboardRepo.leadWaList().getOrNull().orEmpty()
                 res.fold(
                     onSuccess = { items ->
+                        val totalUnread = items.sumOf { c -> c.unread ?: 0 }
+                        // sync snapshot agar worker notifikasi tidak salah banding saat background
+                        notifPrefs.knownUnread = totalUnread
                         _state.update {
                             it.copy(
                                 loading = false,
@@ -81,7 +86,7 @@ class ChatListViewModel @Inject constructor(
                                 error = null,
                                 items = items,
                                 waLeads = waLeads,
-                                totalUnread = items.sumOf { c -> c.unread ?: 0 },
+                                totalUnread = totalUnread,
                             )
                         }
                     },
@@ -116,6 +121,7 @@ data class ThreadUiState(
     val error: String? = null,
     val sending: Boolean = false,
     val draft: String = "",
+    val disputing: Boolean = false,
 )
 
 @HiltViewModel
@@ -238,6 +244,24 @@ class ThreadViewModel @Inject constructor(
             repo.unlock(conversationId).fold(
                 onSuccess = { _state.update { it.copy(locked = false) } },
                 onFailure = { e -> _state.update { it.copy(error = e.message ?: "Gagal membuka chat") } },
+            )
+        }
+    }
+
+    /** Laporkan lead invalid → server buat dispute (admin review 1x24 jam, refund bila disetujui). */
+    fun disputeLead(reason: String, onDone: (Result<String>) -> Unit) {
+        if (_state.value.disputing) return
+        _state.update { it.copy(disputing = true) }
+        viewModelScope.launch {
+            repo.disputeLead(conversationId, reason.trim()).fold(
+                onSuccess = { message ->
+                    _state.update { it.copy(disputing = false) }
+                    onDone(Result.success(message))
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(disputing = false) }
+                    onDone(Result.failure(e))
+                },
             )
         }
     }

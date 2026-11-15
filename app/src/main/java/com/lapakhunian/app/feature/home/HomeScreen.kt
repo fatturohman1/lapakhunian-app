@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -39,9 +40,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil3.compose.AsyncImage
 import com.lapakhunian.app.core.designsystem.AmberBg
 import com.lapakhunian.app.core.designsystem.AmberWarning
 import com.lapakhunian.app.core.designsystem.AppIcons
@@ -56,7 +59,13 @@ import com.lapakhunian.app.core.designsystem.components.SectionHeader
 import com.lapakhunian.app.core.designsystem.PhIcon
 import com.lapakhunian.app.core.domain.model.Property
 import com.lapakhunian.app.core.domain.model.PropertyCategory
+import com.lapakhunian.app.core.network.dto.BannerDto
+import com.lapakhunian.app.core.util.ApiConfig
 import com.lapakhunian.app.R
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.browser.customtabs.CustomTabsIntent
 
 /** Foto khas kota — Wikimedia Commons: Kalimalang Bekasi, Monas Jakarta, Balai Kota Depok, Gedung Sate Bandung (CC BY-SA). */
 private data class PopularCity(val label: String, val imageRes: Int, val cityParam: String)
@@ -136,6 +145,22 @@ fun HomeScreen(
                 enabled = false,
                 onClick = { onOpenExplore(null) },
             )
+
+            // Banner promo dari admin (position "homepage") — hilang bila kosong
+            if (state.banners.isNotEmpty()) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(top = 14.dp),
+                ) {
+                    items(state.banners, key = { it.id ?: it.title ?: "banner" }) { banner ->
+                        BannerCard(banner) { url ->
+                            openCustomTab(context, url)
+                        }
+                    }
+                }
+            }
 
             if (state.loading && state.featured.isEmpty() && state.latest.isEmpty()) {
                 repeat(4) { PropertyCardSkeleton() }
@@ -250,6 +275,55 @@ fun HomeScreen(
                 Box(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun BannerCard(banner: BannerDto, onClick: (String) -> Unit) {
+    val url = banner.linkUrl.orEmpty()
+    Box(
+        modifier = Modifier
+            .width(280.dp)
+            .height(130.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable(enabled = url.isNotBlank()) { onClick(url) },
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        AsyncImage(
+            model = ApiConfig.absoluteUrl(banner.imageUrl),
+            contentDescription = banner.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        // scrim agar judul terbaca
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Brush.verticalGradient(listOf(Color(0x00101828), Color(0xB3101828)))),
+        )
+        if (!banner.title.isNullOrBlank()) {
+            Text(
+                banner.title,
+                color = Color.White,
+                fontWeight = FontWeight.W800,
+                fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(14.dp),
+            )
+        }
+    }
+}
+
+/** Buka link banner di Custom Tab; tanpa browser Custom Tab → fallback browser biasa. */
+private fun openCustomTab(context: Context, url: String) {
+    if (url.isBlank()) return
+    val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return
+    runCatching {
+        CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, uri)
+    }.onFailure {
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
     }
 }
 

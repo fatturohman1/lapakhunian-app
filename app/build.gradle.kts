@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.google.services)
 }
 
 // Signing release — keystore/password dibaca dari local.properties (tidak pernah di-commit).
@@ -151,6 +152,11 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.security.crypto)
     implementation(libs.androidx.browser)
+    implementation(libs.androidx.work.runtime)
+
+    // FCM push notification (config: app/google-services.json dari Firebase)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
     implementation(libs.core.splashscreen)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play)

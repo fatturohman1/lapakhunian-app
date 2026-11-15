@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "684894087402",
+    "project_id": "lapakhunian-e4654",
+    "storage_bucket": "lapakhunian-e4654.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:684894087402:android:4fd658ae971fc726210f93",
+        "android_client_info": {
+          "package_name": "com.lapakhunian.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDE6BSBSFRsiCfSagn7j8yLz43PdSOtEH8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

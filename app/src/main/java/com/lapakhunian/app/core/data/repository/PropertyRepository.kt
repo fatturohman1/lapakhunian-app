@@ -10,6 +10,7 @@ import com.lapakhunian.app.core.domain.model.Property
 import com.lapakhunian.app.core.domain.model.toDomain
 import com.lapakhunian.app.core.network.PropertyApi
 import com.lapakhunian.app.core.network.SearchFilters
+import com.lapakhunian.app.core.network.dto.BannerDto
 import com.lapakhunian.app.core.network.dto.ContactResponseDto
 import com.lapakhunian.app.core.network.dto.GuestContactResponseDto
 import com.lapakhunian.app.core.network.dto.UserDto
@@ -32,6 +33,7 @@ class PropertyRepository @Inject constructor(
     private val api: PropertyApi,
     private val dao: PropertyDao,
     private val session: SessionManager,
+    private val notifPrefs: com.lapakhunian.app.core.notifications.NotificationPrefs,
 ) {
     fun search(filters: SearchFilters): Flow<PagingData<Property>> = Pager(
         config = PagingConfig(pageSize = 12, prefetchDistance = 6, enablePlaceholders = false),
@@ -136,7 +138,7 @@ class PropertyRepository @Inject constructor(
     }
 
     /** Google Sign-In — idToken dari Credential Manager; server auto-buat akun bila belum ada. */
-    suspend fun googleLogin(idToken: String): Result<UserDto> = runCatching {
+    suspend fun googleLogin(idToken: String): Result<GoogleLoginOutcome> = runCatching {
         withFriendlyErrors {
             val res = api.googleLogin(idToken)
             if (!res.success || res.data?.sessionToken == null) {
@@ -144,9 +146,24 @@ class PropertyRepository @Inject constructor(
             }
             val user = res.data.user ?: UserDto()
             session.saveSession(res.data.sessionToken, user)
-            user
+            GoogleLoginOutcome(user, needsOnboarding = res.data.needsOnboarding == true)
         }
     }
+
+    /** Onboarding akun Google: server set role; agent → buat record Agent (3 lead gratis + trial 30 hari). */
+    suspend fun completeOnboarding(role: String): Result<Unit> = runCatching {
+        withFriendlyErrors {
+            val res = api.completeOnboarding(role)
+            if (!res.success) throw ApiException(res.error ?: "Gagal menyimpan pilihan")
+            Unit
+        }
+    }
+
+    data class GoogleLoginOutcome(
+        val user: UserDto,
+        /** true → tampilkan role picker (akun Google baru belum pilih owner/agent). */
+        val needsOnboarding: Boolean,
+    )
 
     suspend fun register(
         name: String,
@@ -162,8 +179,26 @@ class PropertyRepository @Inject constructor(
         }
     }
 
+    /** Banner promo aktif (position "homepage") — non-kritis: gagal jaringan → kosong, tanpa error UI. */
+    suspend fun activeBanners(position: String = "homepage"): List<BannerDto> = runCatching {
+        val res = api.banners(position)
+        if (!res.success) emptyList() else res.data.orEmpty()
+    }.getOrDefault(emptyList())
+
+    /** Registrasi token FCM ke server (dipanggil saat login / token baru). Non-kritis. */
+    suspend fun registerDeviceToken(token: String): Result<Unit> = runCatching {
+        val res = api.registerDeviceToken(token)
+        if (!res.success) throw ApiException(res.error ?: "Gagal registrasi token")
+        Unit
+    }
+
     /** Logout: bersihkan cache properti (biar user berikutnya tidak lihat cache user lama) + sesi. */
     suspend fun logout() {
+        // hapus registrasi push device ini dulu (server berhenti kirim push ke user lama)
+        notifPrefs.fcmToken?.let { token ->
+            runCatching { api.deleteDeviceToken(token) }
+            notifPrefs.fcmToken = null
+        }
         dao.clear()
         session.clearSession()
     }

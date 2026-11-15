@@ -21,6 +21,16 @@ data class ApiMeta(
     val totalPages: Int? = null,
 )
 
+/** Banner promo aktif dari admin (GET /api/banners) — imageUrl bisa relative (/uploads/...). */
+@Serializable
+data class BannerDto(
+    val id: String? = null,
+    val title: String? = null,
+    val imageUrl: String? = null,
+    val linkUrl: String? = null,
+    val position: String? = null,
+)
+
 @Serializable
 data class PropertyDto(
     val id: String? = null,
@@ -83,6 +93,8 @@ data class UserDto(
 data class LoginResponseDto(
     val user: UserDto? = null,
     val sessionToken: String? = null,
+    /** Akun Google baru yang belum memilih role (owner/agent) → tampilkan role picker. */
+    val needsOnboarding: Boolean? = null,
 )
 
 @Serializable

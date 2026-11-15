@@ -310,4 +310,41 @@ class PropertyApi @Inject constructor(
 
     suspend fun userHistory(): ApiEnvelope<List<com.lapakhunian.app.core.network.dto.UserHistoryItemDto>> =
         client.get("$baseUrl/api/user/history").body()
+
+    // ===== Lead dispute (agen lapor lead invalid → admin review/refund) =====
+
+    suspend fun disputeLead(conversationId: String, reason: String): ApiEnvelope<Unit?> =
+        client.post("$baseUrl/api/leads/dispute") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("conversationId" to conversationId, "reason" to reason))
+        }.body()
+
+    // ===== Onboarding akun Google (pilih role owner/agent) =====
+
+    suspend fun completeOnboarding(role: String): ApiEnvelope<Unit?> =
+        client.post("$baseUrl/api/user/onboarding") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("role" to role))
+        }.body()
+
+    // ===== Banner promo (admin-configurable) =====
+
+    suspend fun banners(position: String = "homepage"): ApiEnvelope<List<com.lapakhunian.app.core.network.dto.BannerDto>> =
+        client.get("$baseUrl/api/banners") {
+            parameter("position", position)
+        }.body()
+
+    // ===== Token FCM (push per device) =====
+
+    suspend fun registerDeviceToken(token: String, platform: String = "android"): ApiEnvelope<Unit?> =
+        client.post("$baseUrl/api/notifications/device-token") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("token" to token, "platform" to platform))
+        }.body()
+
+    suspend fun deleteDeviceToken(token: String): ApiEnvelope<Unit?> =
+        client.delete("$baseUrl/api/notifications/device-token") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("token" to token))
+        }.body()
 }
