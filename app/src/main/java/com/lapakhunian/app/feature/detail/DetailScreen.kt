@@ -49,8 +49,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.lapakhunian.app.core.designsystem.AppIcons
@@ -405,44 +403,12 @@ fun DetailScreen(
                 }
 
                 if (showViewer) {
-                    val viewerState = rememberPagerState(initialPage = pagerState.currentPage) { images.size }
-                    Dialog(
-                        onDismissRequest = { showViewer = false },
-                        properties = DialogProperties(usePlatformDefaultWidth = false),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black)
-                                .clickable { showViewer = false },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            HorizontalPager(
-                                state = viewerState,
-                                modifier = Modifier.fillMaxSize(),
-                            ) { page ->
-                                val image = images[page]
-                                if (image != null) {
-                                    AsyncImage(
-                                        model = image,
-                                        contentDescription = property.title,
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                } else {
-                                    Box(Modifier.fillMaxSize().background(Color.Black))
-                                }
-                            }
-                            Text(
-                                text = "${viewerState.currentPage + 1}/${images.size}",
-                                color = Color.White,
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    .padding(top = 48.dp),
-                            )
-                        }
-                    }
+                    PhotoViewer(
+                        images = images,
+                        initialPage = pagerState.currentPage,
+                        contentDescription = property.title,
+                        onDismiss = { showViewer = false },
+                    )
                 }
             }
         }
@@ -451,7 +417,7 @@ fun DetailScreen(
         TopBarOverlay(
             onBack = onBack,
             isFavorite = state.isFavorite,
-            onFavoriteClick = { viewModel.toggleFavorite { onGoLogin() } },
+            onFavoriteClick = { viewModel.toggleFavorite() },
             onShare = onShare,
             onReport = {
                 showReport = true

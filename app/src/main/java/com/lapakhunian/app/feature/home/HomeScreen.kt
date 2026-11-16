@@ -56,6 +56,7 @@ import com.lapakhunian.app.core.designsystem.components.LapakSearchBar
 import com.lapakhunian.app.core.designsystem.components.PropertyCardSkeleton
 import com.lapakhunian.app.core.designsystem.components.PropertyFeaturedCard
 import com.lapakhunian.app.core.designsystem.components.PropertyListCard
+import com.lapakhunian.app.core.designsystem.components.PropertyRecentCard
 import com.lapakhunian.app.core.designsystem.components.SectionHeader
 import com.lapakhunian.app.core.designsystem.PhIcon
 import com.lapakhunian.app.core.domain.model.Property
@@ -84,13 +85,13 @@ fun HomeScreen(
     onOpenExplore: (String?) -> Unit,
     onOpenDetail: (String) -> Unit,
     onOpenNotifications: () -> Unit,
-    onGoLogin: () -> Unit = {},
     onOpenCity: (String) -> Unit = {},
     onOpenTitipJual: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
     val favIds by viewModel.favIds.collectAsState()
+    val recentlyViewed by viewModel.recentlyViewed.collectAsState()
 
     // Tarik ke bawah untuk muat ulang; indikator hanya muncul saat refresh dengan data lama masih tampil
     PullToRefreshBox(
@@ -193,6 +194,27 @@ fun HomeScreen(
                     )
                 }
                 PhIcon(AppIcons.Chevron, tint = MutedGray, size = 16.dp)
+            }
+
+            // Riwayat lokal — memudahkan kembali ke listing yang sempat dilihat
+            if (recentlyViewed.isNotEmpty()) {
+                Column(Modifier.padding(top = 20.dp)) {
+                    SectionHeader("Terakhir dilihat")
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        items(recentlyViewed, key = { it.id }) { snapshot ->
+                            PropertyRecentCard(
+                                title = snapshot.title,
+                                price = snapshot.price,
+                                imageUrl = snapshot.image,
+                                seed = snapshot.id.hashCode(),
+                                onClick = { onOpenDetail(snapshot.id) },
+                            )
+                        }
+                    }
+                }
             }
 
             if (state.loading && state.featured.isEmpty() && state.latest.isEmpty()) {
@@ -298,7 +320,7 @@ fun HomeScreen(
                                     categoryIcon = property.category?.icon() ?: AppIcons.CategoryHouse,
                                     isFavorite = property.id in favIds,
                                     seed = property.id.hashCode(),
-                                    onFavoriteClick = { viewModel.toggleFavorite(property) { onGoLogin() } },
+                                    onFavoriteClick = { viewModel.toggleFavorite(property) },
                                     onClick = { onOpenDetail(property.id) },
                                 )
                             }

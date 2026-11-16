@@ -108,15 +108,11 @@ class PropertyRepository @Inject constructor(
 
     /** Daftar favorit user (Bearer). Respons web nested → ambil `property` per item. */
     fun favorites(): Flow<List<Property>> = flow {
-        try {
-            val res = api.listFavorites()
-            if (!res.success) throw ApiException(res.error ?: "Gagal memuat favorit")
-            val items = res.data.orEmpty().mapNotNull { it.property?.toDomain() }
-            dao.upsertAll(items.map { it.toEntity() })
-            emit(items)
-        } catch (e: Exception) {
-            emit(emptyList())
-        }
+        val res = api.listFavorites()
+        if (!res.success) throw ApiException(res.error ?: "Gagal memuat favorit")
+        val items = res.data.orEmpty().mapNotNull { it.property?.toDomain() }
+        dao.upsertAll(items.map { it.toEntity() })
+        emit(items)
     }
 
     suspend fun setFavorite(propertyId: String, favorite: Boolean): Result<Unit> = runCatching {
@@ -178,6 +174,22 @@ class PropertyRepository @Inject constructor(
             Unit
         }
     }
+
+    suspend fun requestPasswordReset(email: String): Result<Unit> = runCatching {
+        withFriendlyErrors {
+            val res = api.requestPasswordReset(email)
+            if (!res.success) throw ApiException(res.error ?: "Gagal meminta reset password")
+            Unit
+        }
+    }.onFailure { if (it is CancellationException) throw it }
+
+    suspend fun resendVerification(email: String): Result<Unit> = runCatching {
+        withFriendlyErrors {
+            val res = api.resendVerification(email)
+            if (!res.success) throw ApiException(res.error ?: "Gagal mengirim ulang verifikasi")
+            Unit
+        }
+    }.onFailure { if (it is CancellationException) throw it }
 
     /** Banner promo aktif (position "homepage") — non-kritis: gagal jaringan → kosong, tanpa error UI. */
     suspend fun activeBanners(position: String = "homepage"): List<BannerDto> = runCatching {

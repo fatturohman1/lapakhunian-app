@@ -400,6 +400,16 @@ fun ThreadScreen(
             itemsIndexed(state.messages, key = { idx, msg -> msg.id ?: "msg-$idx" }) { _, message ->
                 MessageBubble(message)
             }
+            itemsIndexed(state.failedMessages, key = { idx, msg -> "failed-${msg.id ?: idx}" }) { _, message ->
+                Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth()) {
+                    MessageBubble(message)
+                    Text("Gagal dikirim", color = ErrorRed, style = MaterialTheme.typography.labelMedium)
+                    TextButton(
+                        enabled = !state.sending && !state.locked,
+                        onClick = { message.id?.let(viewModel::retryFailed) },
+                    ) { Text("Coba kirim lagi") }
+                }
+            }
             if (state.locked) {
                 item {
                     Column(
@@ -452,23 +462,30 @@ fun ThreadScreen(
                     .size(46.dp)
                     .background(
                         // abu saat pesan kosong/terkunci, gradasi hijau saat siap kirim
-                        if (state.locked || state.draft.isBlank()) {
+                        if (state.locked || state.sending || state.draft.isBlank()) {
                             androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.surfaceVariant)
                         } else {
                             GreenGradient
                         },
                         CircleShape,
                     )
-                    .clickable(enabled = !state.locked && state.draft.isNotBlank()) {
+                    .clickable(enabled = !state.locked && !state.sending && state.draft.isNotBlank()) {
                         viewModel.send(state.draft)
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                PhIcon(AppIcons.Send,
-                    contentDescription = "Kirim",
-                    tint = if (state.locked || state.draft.isBlank()) MutedGray else Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
+                if (state.sending) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    PhIcon(AppIcons.Send,
+                        contentDescription = "Kirim",
+                        tint = if (state.locked || state.draft.isBlank()) MutedGray else Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
     }

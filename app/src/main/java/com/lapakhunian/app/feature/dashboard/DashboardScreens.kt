@@ -323,13 +323,17 @@ fun ListingWizardScreen(
         }
     }
 
+    val handleBack: () -> Unit = {
+        if (state.step > 1) viewModel.setStep(state.step - 1) else onBack()
+    }
+    androidx.activity.compose.BackHandler(onBack = handleBack)
     val steps = listOf("Informasi", "Detail", "Foto", "Harga")
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
-        DashTopBar("Pasang Iklan", onBack)
+        DashTopBar("Pasang Iklan", handleBack)
         WizardStepHeader(steps = steps, current = state.step)
 
         Column(
@@ -1525,15 +1529,17 @@ private fun ContactRow(icon: String, text: String) {
 fun AgentPlansScreen(
     onBack: () -> Unit,
     onGoLogin: () -> Unit,
-    onPayment: (String) -> Unit,
+    onPayment: (String, String) -> Unit,
     viewModel: AgentPlansViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
 
     androidx.compose.runtime.LaunchedEffect(state.paymentUrl) {
         state.paymentUrl?.let { url ->
-            onPayment(url)
-            viewModel.clearPaymentUrl()
+            state.paymentSubscriptionId?.let { subscriptionId ->
+                onPayment(url, subscriptionId)
+                viewModel.clearPaymentUrl()
+            }
         }
     }
 

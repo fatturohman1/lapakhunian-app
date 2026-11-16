@@ -247,8 +247,23 @@ class PropertyApi @Inject constructor(
     suspend fun renewListing(id: String): ApiEnvelope<SubscribeResponseDto> =
         client.post("$baseUrl/api/properties/$id/renew").body()
 
+    suspend fun requestPasswordReset(email: String): ApiEnvelope<Unit> =
+        client.post("$baseUrl/api/user/reset-password") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("email" to email))
+        }.body()
+
+    suspend fun resendVerification(email: String): ApiEnvelope<Unit> =
+        client.post("$baseUrl/api/user/resend-verification") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("email" to email))
+        }.body()
+
     suspend fun subscription(): ApiEnvelope<SubscriptionDto> =
         client.get("$baseUrl/api/subscription").body()
+
+    suspend fun agentSubscription(): ApiEnvelope<com.lapakhunian.app.core.network.dto.AgentSubscriptionDto> =
+        client.get("$baseUrl/api/agent/subscribe").body()
 
     suspend fun agentProfile(): ApiEnvelope<AgentDto> =
         client.get("$baseUrl/api/agent/profile").body()

@@ -66,16 +66,6 @@ data class PaymentUiState(
     val canCheckStatus: Boolean = false,
 )
 
-/**
- * Alur pembayaran Midtrans Snap:
- * 1. renew (listingId): POST /renew → paymentRedirectUrl → Custom Tabs
- * 2. subscribe (paymentUrl): URL langsung
- * 3. purchase (purchaseId): POST /leads/purchases/{id}/pay → paymentRedirectUrl → Custom Tabs
- * 4. polling status tiap 3 detik (maks 200 siklus ≈ 10 menit): renew → detail listing
- *    aktif kembali (tanpa cache); subscribe → GET /subscription isActive = true;
- *    purchase → GET /agent/leads purchases status = "completed".
- *    Setelah cap, tampilkan error + tombol "Cek Status Sekarang" (checkNow()).
- */
 @HiltViewModel
 class PaymentViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -86,6 +76,7 @@ class PaymentViewModel @Inject constructor(
     private val listingId: String? = savedStateHandle.get<String>("listingId")
     private val initialUrl: String? = savedStateHandle.get<String>("paymentUrl")
     private val purchaseId: String? = savedStateHandle.get<String>("purchaseId")
+    private val subscriptionId: String? = savedStateHandle.get<String>("subscriptionId")?.takeIf { it.isNotBlank() }
 
     private val _state = MutableStateFlow(
         PaymentUiState(canCheckStatus = listingId != null || purchaseId != null || initialUrl != null),
@@ -95,8 +86,15 @@ class PaymentViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             if (initialUrl != null) {
-                _state.update { it.copy(loading = false, paymentUrl = initialUrl) }
-                pollSubscribe()
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        paymentUrl = initialUrl,
+                        canCheckStatus = subscriptionId != null,
+                        error = if (subscriptionId == null) "Identitas tagihan tidak tersedia. Periksa langganan di dashboard." else null,
+                    )
+                }
+                if (subscriptionId != null) pollSubscribe()
             } else if (purchaseId != null) {
                 dashRepo.payLeadPurchase(purchaseId).fold(
                     onSuccess = { sub ->
@@ -131,11 +129,7 @@ class PaymentViewModel @Inject constructor(
     fun checkNow() {
         viewModelScope.launch {
             when {
-                initialUrl != null -> dashRepo.subscription().onSuccess { sub ->
-                    if (sub.isActive == true) {
-                        _state.update { it.copy(paid = true, error = null) }
-                    }
-                }
+                initialUrl != null -> checkSubscriptionStatus()
                 purchaseId != null -> dashRepo.agentLeads().onSuccess { leads ->
                     val p = leads.purchases.firstOrNull { it.id == purchaseId }
                     if (p?.status == "completed") {
@@ -179,15 +173,22 @@ class PaymentViewModel @Inject constructor(
         }
     }
 
+    private suspend fun checkSubscriptionStatus() {
+        val expectedId = subscriptionId ?: return
+        dashRepo.agentSubscription().onSuccess { subscription ->
+            if (subscription?.id == expectedId && subscription.status == "active") {
+                _state.update { it.copy(paid = true, error = null) }
+            }
+        }
+    }
+
     private fun pollSubscribe() {
         viewModelScope.launch {
             var cycles = 0
             while (isActive && _state.value.paid.not() && cycles < MAX_POLL_CYCLES) {
                 delay(POLL_INTERVAL_MS)
                 cycles++
-                dashRepo.subscription().onSuccess { sub ->
-                    if (sub.isActive == true) _state.update { it.copy(paid = true) }
-                }
+                checkSubscriptionStatus()
             }
             if (_state.value.paid.not()) markTimeout()
         }
@@ -303,7 +304,8 @@ fun PaymentScreen(
                 when {
                     state.paid -> "Status terkonfirmasi otomatis. Kembali ke dashboard…"
                     state.loading -> "Membuat tagihan Midtrans Snap"
-                    state.paymentUrl != null -> "Halaman pembayaran dibuka di browser. Setelah bayar, status dicek otomatis setiap 3 detik."
+                    state.paymentUrl != null && state.canCheckStatus -> "Halaman pembayaran dibuka di browser. Setelah bayar, status dicek otomatis setiap 3 detik."
+                    state.paymentUrl != null -> "Halaman pembayaran dibuka di browser. Periksa status langganan di dashboard."
                     else -> "Status pembayaran dapat dicek ulang secara manual."
                 },
                 style = MaterialTheme.typography.bodyMedium,

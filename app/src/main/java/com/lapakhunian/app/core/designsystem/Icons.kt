@@ -23,6 +23,7 @@ object AppIcons {
     const val CheckCircle = "check-circle"
     const val Bell = "bell"
     const val Tune = "sliders-horizontal"
+    const val Compare = "arrows-left-right"
     const val Share = "share-network"
     const val Shield = "shield-check"
     const val Star = "star"
@@ -58,6 +59,7 @@ object AppIcons {
     const val Gear = "gear"
     const val Question = "question"
     const val Calculator = "calculator"
+    const val Download = "download-simple"
 
     // spesifikasi properti
     const val Bed = "bed"

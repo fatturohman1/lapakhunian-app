@@ -9,8 +9,10 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -118,51 +120,81 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val isWizard = currentDestination?.route?.substringBefore('?') == "listing-wizard"
+    var pendingExit by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<(() -> Unit)?>(null) }
+    val navigateSafely: (() -> Unit) -> Unit = { action ->
+        if (isWizard && backStackEntry?.savedStateHandle?.get<Boolean>(com.lapakhunian.app.feature.dashboard.ListingWizardViewModel.DIRTY_KEY) == true) {
+            pendingExit = action
+        } else {
+            action()
+        }
+    }
 
     // Tap notifikasi chat → langsung ke tab Chat
     LaunchedEffect(initialOpenChat) {
-        if (initialOpenChat) navController.navigate(Routes.CHAT)
+        if (initialOpenChat) navigateSafely { navController.navigate(Routes.CHAT) }
     }
 
     // App Links (share link /properti/{slug} dibuka dari luar app)
     LaunchedEffect(initialPropertySlug) {
-        if (initialPropertySlug != null) navController.navigate("detail/$initialPropertySlug")
+        if (initialPropertySlug != null) navigateSafely { navController.navigate("detail/$initialPropertySlug") }
+    }
+
+    // Cek update otomatis (sekali per 24 jam) — dialog hanya muncul jika ada versi baru
+    AutoUpdatePrompt()
+
+    pendingExit?.let { action ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pendingExit = null },
+            title = { Text("Buang perubahan iklan?") },
+            text = { Text("Isian belum dikirim. Keluar dari form akan membuang perubahan ini.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { pendingExit = null; action() }) { Text("Buang & keluar") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { pendingExit = null }) { Text("Lanjut mengisi") }
+            },
+        )
     }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
-                topLevelDestinations.forEach { dest ->
-                    // bandingkan base route (sebelum '?') agar "explore?category=…" tetap
-                    // menyorot tab Jelajah saat dinavigasi dari kategori Home
-                    val selected = currentDestination?.hierarchy
-                        ?.any { it.route?.substringBefore('?') == dest.route.substringBefore('?') } == true
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            navController.navigate(dest.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            PhIcon(
-                                name = dest.icon,
-                                size = 24.dp,
-                                weight = if (selected) PhosphorWeight.FILL else PhosphorWeight.DUOTONE,
-                            )
-                        },
-                        label = { Text(stringResource(dest.labelRes)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = PrimaryDark,
-                            selectedTextColor = PrimaryDark,
-                            indicatorColor = TintGreen,
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
+            if (shouldShowBottomBar(currentDestination?.route)) {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+                    topLevelDestinations.forEach { dest ->
+                        // bandingkan base route (sebelum '?') agar "explore?category=…" tetap
+                        // menyorot tab Jelajah saat dinavigasi dari kategori Home
+                        val selected = currentDestination?.hierarchy
+                            ?.any { it.route?.substringBefore('?') == dest.route.substringBefore('?') } == true
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                navigateSafely {
+                                    navController.navigate(dest.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = !isWizard }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            },
+                            icon = {
+                                PhIcon(
+                                    name = dest.icon,
+                                    size = 24.dp,
+                                    weight = if (selected) PhosphorWeight.FILL else PhosphorWeight.DUOTONE,
+                                )
+                            },
+                            label = { Text(stringResource(dest.labelRes)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = PrimaryDark,
+                                selectedTextColor = PrimaryDark,
+                                indicatorColor = TintGreen,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
                 }
             }
         },
@@ -183,7 +215,6 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                     },
                     onOpenDetail = { navController.navigate("detail/$it") },
                     onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
-                    onGoLogin = { navController.navigate(Routes.LOGIN) },
                     onOpenCity = { city -> navController.navigate("explore?city=$city") },
                     onOpenTitipJual = { navController.navigate(Routes.TITIP_JUAL) },
                 )
@@ -200,7 +231,7 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                     initialCity = entry.arguments?.getString("city"),
                     onOpenDetail = { navController.navigate("detail/$it") },
                     onBack = { navController.popBackStack() },
-                    onGoLogin = { navController.navigate(Routes.LOGIN) },
+                    onOpenCompare = { ids -> navController.navigate("compare?ids=$ids") },
                 )
             }
             composable(Routes.EXPLORE) {
@@ -208,7 +239,18 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                     initialCategory = null,
                     onOpenDetail = { navController.navigate("detail/$it") },
                     onBack = { navController.popBackStack() },
-                    onGoLogin = { navController.navigate(Routes.LOGIN) },
+                    onOpenCompare = { ids -> navController.navigate("compare?ids=$ids") },
+                )
+            }
+            composable(
+                route = "compare?ids={ids}",
+                arguments = listOf(
+                    navArgument("ids") { type = NavType.StringType; nullable = true; defaultValue = "" },
+                ),
+            ) {
+                com.lapakhunian.app.feature.compare.CompareScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenDetail = { navController.navigate("detail/$it") },
                 )
             }
             composable(
@@ -242,7 +284,10 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                 )
             }
             composable("settings") {
+                val navSession: NavSessionViewModel = hiltViewModel()
+                val loggedIn by navSession.isLoggedIn.collectAsState()
                 SettingsScreen(
+                    isLoggedIn = loggedIn,
                     onBack = { navController.popBackStack() },
                     onOpenPrivacy = { navController.navigate("privacy") },
                     onOpenTerms = { navController.navigate("terms") },
@@ -372,7 +417,7 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                 ),
             ) {
                 ListingWizardScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = { navigateSafely { navController.popBackStack() } },
                     onSubmitted = {
                         navController.navigate("owner-dashboard") { popUpTo(Routes.HOME) }
                     },
@@ -424,7 +469,9 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                 AgentPlansScreen(
                     onBack = { navController.popBackStack() },
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
-                    onPayment = { url -> navController.navigate("payment?paymentUrl=${android.net.Uri.encode(url)}") },
+                    onPayment = { url, subscriptionId ->
+                        navController.navigate("payment?paymentUrl=${android.net.Uri.encode(url)}&subscriptionId=${android.net.Uri.encode(subscriptionId)}")
+                    },
                 )
             }
             composable("lead-wa") {
@@ -440,11 +487,12 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                 )
             }
             composable(
-                "payment?listingId={listingId}&paymentUrl={paymentUrl}&purchaseId={purchaseId}",
+                "payment?listingId={listingId}&paymentUrl={paymentUrl}&purchaseId={purchaseId}&subscriptionId={subscriptionId}",
                 arguments = listOf(
                     navArgument("listingId") { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument("paymentUrl") { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument("purchaseId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("subscriptionId") { type = NavType.StringType; nullable = true; defaultValue = null },
                 ),
             ) {
                 com.lapakhunian.app.feature.payments.PaymentScreen(
@@ -455,6 +503,7 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                 LoginScreen(
                     onLoginSuccess = { navController.popBackStack() },
                     onGoRegister = { navController.navigate(Routes.REGISTER) },
+                    onForgotPassword = { email -> navController.navigate("forgot-password?email=${android.net.Uri.encode(email)}") },
                     onNeedsRoleSelection = {
                         navController.navigate(Routes.ROLE_PICKER) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
@@ -462,13 +511,26 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                     },
                 )
             }
+            composable(
+                "forgot-password?email={email}",
+                arguments = listOf(navArgument("email") { type = NavType.StringType; defaultValue = "" }),
+            ) { entry ->
+                com.lapakhunian.app.feature.auth.ForgotPasswordScreen(
+                    initialEmail = entry.arguments?.getString("email").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                )
+            }
             composable(Routes.ROLE_PICKER) {
                 RolePickerScreen(onDone = { navController.popBackStack() })
             }
             composable(Routes.REGISTER) {
                 RegisterScreen(
-                    onRegisterSuccess = { navController.popBackStack() },
-                    onGoLogin = { navController.popBackStack() },
+                    onRegisterSuccess = {
+                        navController.navigate(Routes.LOGIN) { popUpTo(Routes.REGISTER) { inclusive = true }; launchSingleTop = true }
+                    },
+                    onGoLogin = {
+                        navController.navigate(Routes.LOGIN) { popUpTo(Routes.REGISTER) { inclusive = true }; launchSingleTop = true }
+                    },
                 )
             }
         }

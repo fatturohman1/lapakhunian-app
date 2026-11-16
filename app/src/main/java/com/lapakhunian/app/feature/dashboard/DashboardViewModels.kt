@@ -92,6 +92,7 @@ class OwnerDashboardViewModel @Inject constructor(
     }
 }
 
+@kotlinx.serialization.Serializable
 data class WizardUiState(
     val submitting: Boolean = false,
     val uploading: Boolean = false,
@@ -127,28 +128,54 @@ class ListingWizardViewModel @Inject constructor(
     private val repo: DashboardRepository,
     private val propertyRepo: PropertyRepository,
     private val session: SessionManager,
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     /** Route dashboard wizard tanpa argumen; route edit mengirim "listingId". */
     private val editListingId: String? = savedStateHandle.get<String>("listingId")
 
-    private val _state = MutableStateFlow(WizardUiState())
+    private fun restore(key: String): WizardUiState? = savedStateHandle.get<String>(key)?.let { raw ->
+        runCatching { kotlinx.serialization.json.Json.decodeFromString(WizardUiState.serializer(), raw) }.getOrNull()
+    }
+
+    private val restoredDraft = restore(DRAFT_KEY)
+    private var baseline = restore(BASELINE_KEY) ?: WizardUiState().draftSnapshot()
+    private val _state = MutableStateFlow(restoredDraft?.draftSnapshot() ?: WizardUiState())
     val state: StateFlow<WizardUiState> = _state.asStateFlow()
 
     init {
         val id = editListingId
-        if (id == null) {
-            _state.update { it.copy(loading = false) }
-        } else {
-            viewModelScope.launch {
-                propertyRepo.detail(id).fold(
-                    onSuccess = { p -> _state.update { it.prefillFrom(p).copy(loading = false) } },
-                    onFailure = { e -> _state.update { it.copy(loading = false, error = e.message ?: "Gagal memuat iklan") } },
-                )
+        if (restoredDraft == null) {
+            if (id == null) {
+                _state.update { it.copy(loading = false) }
+            } else {
+                viewModelScope.launch {
+                    propertyRepo.detail(id).fold(
+                        onSuccess = { p ->
+                            val loaded = _state.value.prefillFrom(p).copy(loading = false)
+                            baseline = loaded.draftSnapshot()
+                            _state.value = loaded
+                        },
+                        onFailure = { e -> _state.update { it.copy(loading = false, error = e.message ?: "Gagal memuat iklan") } },
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            state.collect { current ->
+                if (!current.loading) {
+                    val draft = current.draftSnapshot()
+                    savedStateHandle[DRAFT_KEY] = kotlinx.serialization.json.Json.encodeToString(WizardUiState.serializer(), draft)
+                    savedStateHandle[BASELINE_KEY] = kotlinx.serialization.json.Json.encodeToString(WizardUiState.serializer(), baseline)
+                    savedStateHandle[DIRTY_KEY] = !current.success && (current.uploading || current.submitting || draft.copy(step = 1) != baseline.copy(step = 1))
+                }
             }
         }
     }
+
+    private fun WizardUiState.draftSnapshot() = copy(
+        loading = false, submitting = false, uploading = false, error = null, validationError = null, success = false,
+    )
 
     /** Prefill form dari listing yang diedit. */
     private fun WizardUiState.prefillFrom(p: Property): WizardUiState = copy(
@@ -180,7 +207,7 @@ class ListingWizardViewModel @Inject constructor(
     }
 
     fun setStep(step: Int) {
-        _state.update { it.copy(step = step.coerceIn(1, 4)) }
+        _state.update { it.copy(step = step.coerceIn(1, 4), validationError = null) }
     }
 
     fun uploadPhoto(bytes: ByteArray, filename: String, mime: String) {
@@ -266,6 +293,12 @@ class ListingWizardViewModel @Inject constructor(
     }
 
     fun clearError() = _state.update { it.copy(error = null) }
+
+    companion object {
+        const val DIRTY_KEY = "wizard_dirty"
+        private const val DRAFT_KEY = "wizard_draft"
+        private const val BASELINE_KEY = "wizard_baseline"
+    }
 }
 
 // ================= Agent =================
@@ -462,6 +495,7 @@ class AgentPlansViewModel @Inject constructor(
         val error: String? = null,
         val subscribingPlanId: String? = null,
         val paymentUrl: String? = null,
+        val paymentSubscriptionId: String? = null,
         val voucherCode: String = "",
         val successMessage: String? = null,
     )
@@ -501,7 +535,9 @@ class AgentPlansViewModel @Inject constructor(
     }
 
     fun subscribe(planId: String) {
-        _state.update { it.copy(subscribingPlanId = planId, error = null, successMessage = null) }
+        _state.update {
+            it.copy(subscribingPlanId = planId, error = null, successMessage = null, paymentUrl = null, paymentSubscriptionId = null)
+        }
         viewModelScope.launch {
             repo.subscribePlan(planId, _state.value.voucherCode.trim().ifBlank { null }).fold(
                 onSuccess = { outcome ->
@@ -515,8 +551,14 @@ class AgentPlansViewModel @Inject constructor(
                             )
                         }
                     } else {
+                        val url = outcome.sub.paymentRedirectUrl
+                        val subscriptionId = outcome.sub.subscriptionId
                         _state.update {
-                            it.copy(subscribingPlanId = null, paymentUrl = outcome.sub.paymentRedirectUrl)
+                            if (url.isNullOrBlank() || subscriptionId.isNullOrBlank()) {
+                                it.copy(subscribingPlanId = null, error = "Data tagihan tidak lengkap. Coba lagi.")
+                            } else {
+                                it.copy(subscribingPlanId = null, paymentUrl = url, paymentSubscriptionId = subscriptionId)
+                            }
                         }
                     }
                 },
@@ -526,7 +568,7 @@ class AgentPlansViewModel @Inject constructor(
     }
 
     fun clearPaymentUrl() {
-        _state.update { it.copy(paymentUrl = null) }
+        _state.update { it.copy(paymentUrl = null, paymentSubscriptionId = null) }
     }
 }
 

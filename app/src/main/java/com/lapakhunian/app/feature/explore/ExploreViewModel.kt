@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.lapakhunian.app.core.data.local.GuestFavoritesStore
+import com.lapakhunian.app.core.data.local.toSnapshot
 import com.lapakhunian.app.core.data.repository.PropertyRepository
 import com.lapakhunian.app.core.data.session.SessionManager
 import com.lapakhunian.app.core.domain.model.Property
@@ -13,12 +15,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -27,6 +31,7 @@ import javax.inject.Inject
 class ExploreViewModel @Inject constructor(
     private val repo: PropertyRepository,
     private val session: SessionManager,
+    private val guest: GuestFavoritesStore,
 ) : ViewModel() {
 
     private val _filters = MutableStateFlow(SearchFilters())
@@ -35,8 +40,11 @@ class ExploreViewModel @Inject constructor(
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
-    private val _favIds = MutableStateFlow<Set<String>>(emptySet())
-    val favIds: StateFlow<Set<String>> = _favIds.asStateFlow()
+    private val _serverFavIds = MutableStateFlow<Set<String>>(emptySet())
+    val favIds: StateFlow<Set<String>> =
+        combine(session.tokenFlow, _serverFavIds, guest.items) { token, server, local ->
+            if (token == null) local.map { it.id }.toSet() else server
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
     private val refreshTick = MutableStateFlow(0)
 
@@ -48,7 +56,7 @@ class ExploreViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             if (session.tokenFlow.first() != null) {
-                _favIds.value = runCatching { repo.favorites().first() }
+                _serverFavIds.value = runCatching { repo.favorites().first() }
                     .getOrDefault(emptyList())
                     .map { it.id }
                     .toSet()
@@ -65,6 +73,13 @@ class ExploreViewModel @Inject constructor(
         _filters.value = transform(_filters.value)
     }
 
+    fun applyFilters(filters: SearchFilters) {
+        _query.value = filters.search
+        _filters.value = filters
+    }
+
+    fun resetFilters() = applyFilters(SearchFilters())
+
     fun setInitialCategory(category: String?) {
         if (category != null) {
             _filters.value = _filters.value.copy(category = category)
@@ -77,23 +92,40 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    /** Toggle favorit optimis; guest → arahkan login. Gagal API → revert. */
-    fun toggleFavorite(property: Property, onNeedsLogin: () -> Unit) {
+    /** Toggle favorit optimis; tamu → simpan lokal di perangkat. Gagal API → revert. */
+    fun toggleFavorite(property: Property) {
         if (session.tokenFlow.value == null) {
-            onNeedsLogin()
+            guest.toggle(property.toSnapshot())
             return
         }
         val id = property.id
-        val wasFavorite = id in _favIds.value
-        _favIds.value = if (wasFavorite) _favIds.value - id else _favIds.value + id
+        val wasFavorite = id in _serverFavIds.value
+        _serverFavIds.value = if (wasFavorite) _serverFavIds.value - id else _serverFavIds.value + id
         viewModelScope.launch {
             repo.setFavorite(id, !wasFavorite).onFailure {
-                _favIds.value = if (wasFavorite) _favIds.value + id else _favIds.value - id
+                _serverFavIds.value = if (wasFavorite) _serverFavIds.value + id else _serverFavIds.value - id
             }
         }
     }
 
     fun retry() {
         refreshTick.value = refreshTick.value + 1
+    }
+
+    private val _compareSelection = MutableStateFlow<List<Property>>(emptyList())
+    val compareSelection: StateFlow<List<Property>> = _compareSelection.asStateFlow()
+
+    /** Pilihan pembanding maks 3; toggle item yang sudah terpilih mengeluarkannya. */
+    fun toggleCompare(property: Property) {
+        _compareSelection.value = when {
+            _compareSelection.value.any { it.id == property.id } ->
+                _compareSelection.value.filterNot { it.id == property.id }
+            _compareSelection.value.size >= 3 -> _compareSelection.value
+            else -> _compareSelection.value + property
+        }
+    }
+
+    fun clearCompare() {
+        _compareSelection.value = emptyList()
     }
 }

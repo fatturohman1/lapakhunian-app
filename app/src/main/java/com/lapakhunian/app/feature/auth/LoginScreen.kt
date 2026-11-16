@@ -66,6 +66,7 @@ import kotlinx.coroutines.launch
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onGoRegister: () -> Unit,
+    onForgotPassword: (String) -> Unit = {},
     /** Akun Google baru belum pilih role (owner/agent) → arahkan ke role picker. */
     onNeedsRoleSelection: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel(),
@@ -151,6 +152,12 @@ fun LoginScreen(
                 .fillMaxWidth()
                 .padding(top = 16.dp),
         )
+
+        androidx.compose.material3.TextButton(
+            onClick = { onForgotPassword(email.trim()) },
+            enabled = !state.loading && !googleLoading,
+            modifier = Modifier.align(Alignment.End),
+        ) { Text("Lupa password?") }
 
         state.error?.let { message ->
             Text(

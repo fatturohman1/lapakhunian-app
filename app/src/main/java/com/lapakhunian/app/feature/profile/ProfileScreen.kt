@@ -259,14 +259,18 @@ fun ProfileScreen(
                 items = listOf(
                     MenuEntry(AppIcons.Edit, "Edit Profil", onEditProfile as Any),
                     MenuEntry(AppIcons.Bell, "Notifikasi", onOpenNotifications as Any),
-                    MenuEntry(AppIcons.Gear, "Pengaturan", onOpenSettings as Any),
-                    MenuEntry(AppIcons.Question, "Bantuan", onOpenHelp as Any),
                 ),
             )
+        }
+        MenuGroup(
+            items = listOf(
+                MenuEntry(AppIcons.Gear, "Pengaturan", onOpenSettings as Any),
+                MenuEntry(AppIcons.Question, "Bantuan", onOpenHelp as Any),
+            ),
+        )
+        if (user != null) {
             MenuGroup(
-                items = listOf(
-                    MenuEntry(AppIcons.Logout, "Keluar", "logout"),
-                ),
+                items = listOf(MenuEntry(AppIcons.Logout, "Keluar", "logout")),
                 logout = { pendingLogout = true },
             )
         }

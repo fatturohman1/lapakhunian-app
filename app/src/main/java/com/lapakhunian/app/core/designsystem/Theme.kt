@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.Color
  * blok darkColorScheme lama dihapus agar tidak terpakai tak sengaja.
  */
 private val LightColors = lightColorScheme(
-    primary = PrimaryGreen,
+    primary = PrimaryDark,
     onPrimary = Color.White,
     primaryContainer = TintGreen,
     onPrimaryContainer = PrimaryDark,

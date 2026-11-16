@@ -282,11 +282,17 @@ data class PlanDto(
 
 @Serializable
 data class SubscribeResponseDto(
-    val paymentToken: String? = null,
-    val paymentRedirectUrl: String? = null,
+    @SerialName("token") val paymentToken: String? = null,
+    @SerialName("paymentUrl") val paymentRedirectUrl: String? = null,
     val orderId: String? = null,
     val status: String? = null,
     val subscriptionId: String? = null,
+)
+
+@Serializable
+data class AgentSubscriptionDto(
+    val id: String? = null,
+    val status: String? = null,
 )
 
 @Serializable

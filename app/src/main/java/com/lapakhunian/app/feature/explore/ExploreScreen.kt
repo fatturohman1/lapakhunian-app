@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,6 +46,8 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.lapakhunian.app.core.designsystem.AppIcons
 import com.lapakhunian.app.core.designsystem.MutedGray
+import com.lapakhunian.app.core.designsystem.PrimaryDark
+import com.lapakhunian.app.core.designsystem.TintGreen
 import com.lapakhunian.app.core.designsystem.components.BackIconButton
 import com.lapakhunian.app.core.designsystem.components.EmptyState
 import com.lapakhunian.app.core.designsystem.components.FilterChip
@@ -55,7 +58,7 @@ import com.lapakhunian.app.core.designsystem.PhIcon
 import com.lapakhunian.app.core.domain.model.Property
 import com.lapakhunian.app.core.domain.model.PropertyCategory
 import com.lapakhunian.app.core.network.SearchFilters
-import com.lapakhunian.app.core.util.compactRupiah
+import com.lapakhunian.app.core.util.formatRupiah
 
 // Nilai kota = nilai `city` aktual di database (sama dengan web, city-alias.ts) —
 // filter API pakai contains-insensitive jadi harus substring dari nilai DB.
@@ -79,13 +82,15 @@ fun ExploreScreen(
     initialCategory: String?,
     onOpenDetail: (String) -> Unit,
     onBack: () -> Unit,
-    onGoLogin: () -> Unit = {},
+    onOpenCompare: (String) -> Unit = {},
     initialCity: String? = null,
     viewModel: ExploreViewModel = hiltViewModel(),
 ) {
     val filters by viewModel.filters.collectAsState()
     val query by viewModel.query.collectAsState()
     val favIds by viewModel.favIds.collectAsState()
+    val compareSelection by viewModel.compareSelection.collectAsState()
+    var compareMode by remember { mutableStateOf(false) }
     val paging = viewModel.properties.collectAsLazyPagingItems()
     var showFilterSheet by remember { mutableStateOf(false) }
 
@@ -112,6 +117,25 @@ fun ExploreScreen(
                 modifier = Modifier.padding(start = 12.dp),
             )
             Box(Modifier.weight(1f))
+            // Mode bandingkan: pilih 2-3 kartu lalu buka layar pembanding
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(if (compareMode) TintGreen else Color.Transparent)
+                    .clickable {
+                        compareMode = !compareMode
+                        if (!compareMode) viewModel.clearCompare()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                PhIcon(
+                    AppIcons.Compare,
+                    contentDescription = "Mode bandingkan",
+                    tint = if (compareMode) PrimaryDark else MaterialTheme.colorScheme.onSurface,
+                    size = 22.dp,
+                )
+            }
             // Ikon filter standar (sliders) + hit area 44dp
             Box(
                 modifier = Modifier
@@ -148,12 +172,12 @@ fun ExploreScreen(
             FilterChip(
                 label = "Dijual",
                 selected = filters.purpose == "dijual",
-                onClick = { viewModel.update { it.copy(purpose = if (it.purpose == "dijual") "disewa" else "dijual") } },
+                onClick = { viewModel.update { it.copy(purpose = "dijual") } },
             )
             FilterChip(
                 label = "Disewa",
                 selected = filters.purpose == "disewa",
-                onClick = { viewModel.update { it.copy(purpose = if (it.purpose == "disewa") "dijual" else "disewa") } },
+                onClick = { viewModel.update { it.copy(purpose = "disewa") } },
             )
             PropertyCategory.entries.forEach { category ->
                 FilterChip(
@@ -165,6 +189,19 @@ fun ExploreScreen(
                         }
                     },
                 )
+            }
+        }
+
+        val filterSummary = listOfNotNull(
+            filters.city,
+            filters.minPrice?.let { "Min ${formatRupiah(it)}" },
+            filters.maxPrice?.let { "Maks ${formatRupiah(it)}" },
+            filters.amenities.takeIf { it.isNotEmpty() }?.joinToString(", "),
+        ).joinToString(" · ")
+        if (filterSummary.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(filterSummary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                androidx.compose.material3.TextButton(onClick = viewModel::resetFilters) { Text("Hapus filter") }
             }
         }
 
@@ -181,7 +218,7 @@ fun ExploreScreen(
 
         // Tarik ke bawah untuk muat ulang hasil pencarian
         PullToRefreshBox(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f),
             isRefreshing = paging.loadState.refresh is LoadState.Loading && paging.itemCount > 0,
             onRefresh = { paging.refresh() },
         ) {
@@ -212,8 +249,43 @@ fun ExploreScreen(
                     paging = paging,
                     favIds = favIds,
                     onOpenDetail = onOpenDetail,
-                    onFavoriteClick = { property -> viewModel.toggleFavorite(property) { onGoLogin() } },
+                    onFavoriteClick = { property -> viewModel.toggleFavorite(property) },
+                    compareMode = compareMode,
+                    selectedIds = compareSelection.map { it.id }.toSet(),
+                    onToggleCompare = viewModel::toggleCompare,
                 )
+            }
+        }
+
+        if (compareMode) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        compareMode = false
+                        viewModel.clearCompare()
+                    },
+                ) { Text("Batal") }
+                Box(Modifier.weight(1f))
+                androidx.compose.material3.Button(
+                    enabled = compareSelection.size >= 2,
+                    onClick = {
+                        onOpenCompare(compareSelection.joinToString(",") { it.id })
+                        viewModel.clearCompare()
+                        compareMode = false
+                    },
+                    shape = CircleShape,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+                ) {
+                    Text("Bandingkan (${compareSelection.size})", fontWeight = FontWeight.W700)
+                }
             }
         }
     }
@@ -221,21 +293,11 @@ fun ExploreScreen(
     if (showFilterSheet) {
         FilterSheet(
             filters = filters,
-            onApply = { showFilterSheet = false },
+            onApply = { draft ->
+                viewModel.applyFilters(draft)
+                showFilterSheet = false
+            },
             onDismiss = { showFilterSheet = false },
-            onCityChange = { city -> viewModel.update { it.copy(city = city) } },
-            onMinPriceChange = { min -> viewModel.update { it.copy(minPrice = min) } },
-            onMaxPriceChange = { max -> viewModel.update { it.copy(maxPrice = max) } },
-            onAmenityToggle = { amenity ->
-                viewModel.update { f ->
-                    f.copy(amenities = if (amenity in f.amenities) f.amenities - amenity else f.amenities + amenity)
-                }
-            },
-            onReset = {
-                viewModel.update { f ->
-                    f.copy(city = null, minPrice = null, maxPrice = null, amenities = emptySet())
-                }
-            },
         )
     }
 }
@@ -246,6 +308,9 @@ private fun PropertyList(
     favIds: Set<String>,
     onOpenDetail: (String) -> Unit,
     onFavoriteClick: (Property) -> Unit,
+    compareMode: Boolean = false,
+    selectedIds: Set<String> = emptySet(),
+    onToggleCompare: (Property) -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -274,6 +339,9 @@ private fun PropertyList(
                 seed = property.id.hashCode(),
                 onFavoriteClick = { onFavoriteClick(property) },
                 onClick = { onOpenDetail(property.id) },
+                compareMode = compareMode,
+                compareSelected = property.id in selectedIds,
+                onCompareToggle = { onToggleCompare(property) },
             )
         }
         when (paging.loadState.append) {
@@ -299,79 +367,82 @@ private val AMENITIES = listOf("Carport", "Taman", "Kolam Renang", "Masjid", "CC
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun FilterSheet(
+internal fun FilterSheet(
     filters: SearchFilters,
-    onApply: () -> Unit,
+    onApply: (SearchFilters) -> Unit,
     onDismiss: () -> Unit,
-    onCityChange: (String?) -> Unit,
-    onMinPriceChange: (Long?) -> Unit,
-    onMaxPriceChange: (Long?) -> Unit,
-    onAmenityToggle: (String) -> Unit,
-    onReset: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        // Scrollable agar tombol Reset/Terapkan terjangkau di layar pendek
-        Column(
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
-        ) {
-            Text("Filter Pencarian", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.W800)
+    var draft by remember(filters) { mutableStateOf(filters) }
+    var minimum by remember(filters) { mutableStateOf(filters.minPrice?.toString().orEmpty()) }
+    var maximum by remember(filters) { mutableStateOf(filters.maxPrice?.toString().orEmpty()) }
+    val minPrice = minimum.toLongOrNull()
+    val maxPrice = maximum.toLongOrNull()
+    val invalidNumber = (minimum.isNotEmpty() && minPrice == null) || (maximum.isNotEmpty() && maxPrice == null)
+    val invalidRange = minPrice != null && maxPrice != null && minPrice > maxPrice
+    val valid = !invalidNumber && !invalidRange
 
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Filter Pencarian", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.W800, modifier = Modifier.weight(1f))
+                androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Batal") }
+            }
             SheetGroup("Kota") {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(label = "Semua Kota", selected = filters.city == null, onClick = { onCityChange(null) })
+                    FilterChip("Semua Kota", draft.city == null, { draft = draft.copy(city = null) })
                     CITIES.forEach { city ->
-                        FilterChip(label = city, selected = filters.city == city, onClick = { onCityChange(city) })
+                        FilterChip(city, draft.city == city, { draft = draft.copy(city = city) })
                     }
                 }
             }
-            SheetGroup("Harga minimum (Rp juta)") {
-                Slider(
-                    // API & SearchFilters memakai rupiah penuh; slider dalam juta → ×1jt
-                    value = ((filters.minPrice ?: 0L) / 1_000_000L).toFloat().coerceIn(0f, 5000f),
-                    onValueChange = { onMinPriceChange(it.toLong().takeIf { v -> v > 0 }?.times(1_000_000L)) },
-                    valueRange = 0f..5000f,
+            SheetGroup("Rentang harga") {
+                androidx.compose.material3.OutlinedTextField(
+                    value = minimum,
+                    onValueChange = { minimum = it.filter { char -> char in '0'..'9' } },
+                    label = { Text("Harga minimum (Rp)") },
+                    supportingText = { Text(minPrice?.let { formatRupiah(it) } ?: "Tanpa batas minimum") },
+                    isError = invalidNumber || invalidRange,
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                Text(filters.minPrice?.let { "Rp ${compactRupiah(it)}" } ?: "Tanpa batas minimum", style = MaterialTheme.typography.labelMedium, color = MutedGray)
-            }
-            SheetGroup("Harga maksimum (Rp juta)") {
-                Slider(
-                    value = ((filters.maxPrice ?: 5_000_000_000L) / 1_000_000L).toFloat().coerceIn(0f, 5000f),
-                    onValueChange = { onMaxPriceChange(it.toLong().takeIf { v -> v < 5000 }?.times(1_000_000L)) },
-                    valueRange = 0f..5000f,
+                androidx.compose.material3.OutlinedTextField(
+                    value = maximum,
+                    onValueChange = { maximum = it.filter { char -> char in '0'..'9' } },
+                    label = { Text("Harga maksimum (Rp)") },
+                    supportingText = { Text(maxPrice?.let { formatRupiah(it) } ?: "Tanpa batas maksimum") },
+                    isError = invalidNumber || invalidRange,
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                Text(filters.maxPrice?.let { "Rp ${compactRupiah(it)}" } ?: "Tanpa batas maksimum", style = MaterialTheme.typography.labelMedium, color = MutedGray)
+                if (!valid) {
+                    Text(
+                        if (invalidNumber) "Nominal harga terlalu besar." else "Harga minimum tidak boleh melebihi maksimum.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
             SheetGroup("Fasilitas") {
-                // FlowRow agar semua fasilitas terlihat tanpa scroll horizontal
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AMENITIES.forEach { amenity ->
-                        FilterChip(
-                            label = amenity,
-                            selected = amenity in filters.amenities,
-                            onClick = { onAmenityToggle(amenity) },
-                        )
+                        FilterChip(amenity, amenity in draft.amenities, {
+                            draft = draft.copy(amenities = if (amenity in draft.amenities) draft.amenities - amenity else draft.amenities + amenity)
+                        })
                     }
                 }
             }
-
-            // Aksi sheet: reset semua filter + terapkan (filter live, Terapkan hanya menutup)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp, bottom = 28.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
+            Row(Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 28.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
-                    onClick = onReset,
+                    onClick = { draft = SearchFilters(); minimum = ""; maximum = "" },
                     shape = RoundedCornerShape(50),
                     modifier = Modifier.weight(1f),
                 ) { Text("Reset", fontWeight = FontWeight.W700) }
                 Button(
-                    onClick = onApply,
+                    onClick = { if (valid) onApply(draft.copy(minPrice = minPrice, maxPrice = maxPrice)) },
+                    enabled = valid,
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     modifier = Modifier.weight(1f),
                 ) { Text("Terapkan", fontWeight = FontWeight.W700) }
             }

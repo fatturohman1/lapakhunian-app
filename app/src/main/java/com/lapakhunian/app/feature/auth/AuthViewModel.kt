@@ -17,6 +17,9 @@ data class AuthUiState(
     val loading: Boolean = false,
     val error: String? = null,
     val registerSuccess: Boolean = false,
+    val registeredEmail: String = "",
+    val emailMessage: String? = null,
+    val emailCooldownSeconds: Int = 0,
     /** Akun Google baru yang belum pilih role → UI navigasi ke role picker. */
     val needsRoleSelection: Boolean = false,
 )
@@ -99,7 +102,8 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             repo.register(name.trim(), email.trim(), password, role, phone?.takeIf { it.isNotBlank() }).fold(
                 onSuccess = {
-                    _state.update { it.copy(loading = false, registerSuccess = true) }
+                    _state.update { it.copy(loading = false, registerSuccess = true, registeredEmail = email.trim()) }
+                    startEmailCooldown()
                 },
                 onFailure = { e ->
                     _state.update { it.copy(loading = false, error = friendlyError(e, "Registrasi gagal")) }
@@ -108,7 +112,50 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun clearError() = _state.update { it.copy(error = null) }
+    fun requestPasswordReset(email: String) = sendAccountEmail(email, verification = false)
+
+    fun resendVerification(email: String) = sendAccountEmail(email, verification = true)
+
+    private fun sendAccountEmail(email: String, verification: Boolean) {
+        if (_state.value.loading || _state.value.emailCooldownSeconds > 0) return
+        val address = email.trim()
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(address).matches()) {
+            _state.update { it.copy(error = "Masukkan alamat email yang valid.") }
+            return
+        }
+        _state.update { it.copy(loading = true, error = null, emailMessage = null) }
+        viewModelScope.launch {
+            val result = if (verification) repo.resendVerification(address) else repo.requestPasswordReset(address)
+            result.fold(
+                onSuccess = {
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            emailMessage = if (verification) "Email verifikasi dikirim ulang. Periksa kotak masuk dan folder spam."
+                                else "Jika email terdaftar, tautan reset password akan dikirim. Periksa kotak masuk dan folder spam.",
+                        )
+                    }
+                    startEmailCooldown()
+                },
+                onFailure = { error ->
+                    if (error is kotlinx.coroutines.CancellationException) throw error
+                    _state.update { it.copy(loading = false, error = friendlyError(error, "Gagal mengirim email")) }
+                },
+            )
+        }
+    }
+
+    private fun startEmailCooldown() {
+        _state.update { it.copy(emailCooldownSeconds = 60) }
+        viewModelScope.launch {
+            repeat(60) {
+                kotlinx.coroutines.delay(1_000)
+                _state.update { state -> state.copy(emailCooldownSeconds = (state.emailCooldownSeconds - 1).coerceAtLeast(0)) }
+            }
+        }
+    }
+
+    fun clearError() = _state.update { it.copy(error = null, emailMessage = null) }
 
     /** Pesan error dari server lewat; error jaringan lain → pesan ramah (bukan teks OkHttp mentah). */
     private fun friendlyError(e: Throwable, fallback: String): String =

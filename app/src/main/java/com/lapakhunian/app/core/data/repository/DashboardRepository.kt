@@ -133,6 +133,13 @@ class DashboardRepository @Inject constructor(
         SubscribeOutcome(data, res.message)
     }
 
+    suspend fun agentSubscription(): Result<com.lapakhunian.app.core.network.dto.AgentSubscriptionDto?> = runCatching {
+        requireAuth()
+        val res = api.agentSubscription()
+        if (!res.success) throw ApiException(res.error ?: "Gagal memuat status pembayaran")
+        res.data
+    }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+
     suspend fun transactions(): Result<List<TransactionDto>> = runCatching {
         requireAuth()
         val res = api.transactions()

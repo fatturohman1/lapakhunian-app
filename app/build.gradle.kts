@@ -168,4 +168,17 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("io.ktor:ktor-client-mock:3.0.3")
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("io.ktor:ktor-client-mock:3.0.3")
+    androidTestImplementation("io.mockk:mockk-android:1.13.13") {
+        exclude(group = "org.junit.jupiter")
+        exclude(group = "org.junit.platform")
+    }
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

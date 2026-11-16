@@ -39,7 +39,7 @@ import com.lapakhunian.app.core.designsystem.PrimaryDark
 import com.lapakhunian.app.core.designsystem.TintGreen
 import com.lapakhunian.app.core.designsystem.components.BackIconButton
 import com.lapakhunian.app.core.util.formatRupiah
-import kotlin.math.pow
+import com.lapakhunian.app.core.util.monthlyPayment
 
 /**
  * Kalkulator simulasi KPR (anuitas) — gaya portal properti lain.
@@ -242,14 +242,7 @@ fun KprScreen(
     }
 }
 
-/** Angsuran anuitas: P * i / (1 - (1+i)^-n); bunga 0% → P/n. */
-private fun monthlyPayment(loan: Long, ratePercent: Double, years: Int): Long {
-    if (loan <= 0 || years <= 0) return 0L
-    val i = ratePercent / 100.0 / 12.0
-    val n = years * 12.0
-    val monthly = if (i <= 0.0) loan / n else loan * i / (1 - (1 + i).pow(-n))
-    return monthly.toLong()
-}
+/** Angsuran anuitas dipindah ke core/util/KprMath.kt agar bisa dipakai layar pembanding. */
 
 @Composable
 private fun InputLabel(label: String, modifier: Modifier = Modifier) {

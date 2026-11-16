@@ -63,8 +63,13 @@ fun RegisterScreen(
     var role by remember { mutableStateOf("owner") }
     var showPassword by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.registerSuccess) {
-        if (state.registerSuccess) onRegisterSuccess()
+    if (state.registerSuccess) {
+        RegistrationConfirmation(
+            state = state,
+            onResend = { viewModel.resendVerification(state.registeredEmail) },
+            onContinue = onRegisterSuccess,
+        )
+        return
     }
 
     Column(

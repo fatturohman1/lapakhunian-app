@@ -3,6 +3,9 @@ package com.lapakhunian.app.feature.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lapakhunian.app.core.data.local.GuestFavoritesStore
+import com.lapakhunian.app.core.data.local.RecentlyViewedStore
+import com.lapakhunian.app.core.data.local.toSnapshot
 import com.lapakhunian.app.core.data.repository.PropertyRepository
 import com.lapakhunian.app.core.data.session.SessionManager
 import com.lapakhunian.app.core.domain.model.Property
@@ -28,6 +31,8 @@ class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repo: PropertyRepository,
     private val session: SessionManager,
+    private val recentlyViewed: RecentlyViewedStore,
+    private val guest: GuestFavoritesStore,
 ) : ViewModel() {
 
     val propertyId: String = savedStateHandle.get<String>("propertyId").orEmpty()
@@ -58,6 +63,7 @@ class DetailViewModel @Inject constructor(
             repo.trackView(propertyId) // view tracker, fire-and-forget
             repo.detail(propertyId).fold(
                 onSuccess = { property ->
+                    recentlyViewed.record(property.toSnapshot())
                     _state.update { it.copy(loading = false, property = property, error = null) }
                     loadFavoriteState()
                 },
@@ -67,7 +73,10 @@ class DetailViewModel @Inject constructor(
     }
 
     private suspend fun loadFavoriteState() {
-        if (session.tokenFlow.first() == null) return
+        if (session.tokenFlow.first() == null) {
+            _state.update { it.copy(isFavorite = guest.items.value.any { s -> s.id == propertyId }) }
+            return
+        }
         val favIds = runCatching { repo.favorites().first() }
             .getOrDefault(emptyList())
             .map { it.id }
@@ -75,11 +84,12 @@ class DetailViewModel @Inject constructor(
         _state.update { it.copy(isFavorite = propertyId in favIds) }
     }
 
-    /** Toggle favorit persist ke API; guest → arahkan login. Gagal API → revert. */
-    fun toggleFavorite(onNeedsLogin: () -> Unit) {
+    /** Toggle favorit: login → persist ke API (gagal revert); tamu → simpan lokal di perangkat. */
+    fun toggleFavorite() {
         val property = _state.value.property ?: return
         if (session.tokenFlow.value == null) {
-            onNeedsLogin()
+            guest.toggle(property.toSnapshot())
+            _state.update { it.copy(isFavorite = guest.items.value.any { s -> s.id == property.id }) }
             return
         }
         val wasFavorite = _state.value.isFavorite

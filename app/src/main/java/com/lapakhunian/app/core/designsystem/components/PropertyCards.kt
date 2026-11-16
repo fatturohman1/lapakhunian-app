@@ -94,6 +94,55 @@ private fun ThumbImage(
     }
 }
 
+/** Kartu ringkas untuk baris "Terakhir dilihat" di Beranda. */
+@Composable
+fun PropertyRecentCard(
+    title: String,
+    price: Long,
+    imageUrl: String?,
+    seed: Int = 0,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .width(160.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+    ) {
+        ThumbImage(
+            imageUrl = imageUrl,
+            icon = AppIcons.CategoryHouse,
+            seed = seed,
+            iconSize = 24.dp,
+            contentDescription = title,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(96.dp)
+                .clip(RoundedCornerShape(12.dp)),
+        )
+        Text(
+            title,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.W700,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        Text(
+            formatRupiah(price),
+            color = PrimaryDark,
+            fontWeight = FontWeight.W800,
+            fontSize = 12.5.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
+}
+
 @Composable
 fun PropertyListCard(
     title: String,
@@ -109,112 +158,128 @@ fun PropertyListCard(
     seed: Int = 0,
     onFavoriteClick: (() -> Unit)? = null,
     onClick: () -> Unit,
+    compareMode: Boolean = false,
+    compareSelected: Boolean = false,
+    onCompareToggle: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = {
+                if (compareMode && onCompareToggle != null) onCompareToggle() else onClick()
+            }),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box {
-                ThumbImage(
-                    imageUrl = imageUrl,
-                    icon = categoryIcon,
-                    seed = seed,
-                    iconSize = 28.dp,
-                    contentDescription = title,
-                    modifier = Modifier
-                        .width(90.dp)
-                        .height(90.dp)
-                        .clip(RoundedCornerShape(14.dp)),
-                )
-                if (isFeatured) {
-                    Text(
-                        text = "UNGGULAN",
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box {
+                    ThumbImage(
+                        imageUrl = imageUrl,
+                        icon = categoryIcon,
+                        seed = seed,
+                        iconSize = 28.dp,
+                        contentDescription = title,
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(6.dp)
-                            .background(Color.White.copy(alpha = 0.94f), RoundedCornerShape(50))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        color = PrimaryDark,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.W800,
-                        letterSpacing = 0.5.sp,
+                            .width(90.dp)
+                            .height(90.dp)
+                            .clip(RoundedCornerShape(14.dp)),
                     )
+                    if (compareMode) {
+                        PhIcon(
+                            name = AppIcons.CheckCircle,
+                            weight = PhosphorWeight.FILL,
+                            tint = if (compareSelected) PrimaryDark else Color.White,
+                            size = 24.dp,
+                            contentDescription = if (compareSelected) "Terpilih untuk bandingkan" else "Pilih untuk bandingkan",
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(4.dp)
+                                .clip(CircleShape)
+                                .background(if (compareSelected) Color.White else Color(0x66000000)),
+                        )
+                    }
+                    if (isFeatured) {
+                        Text(
+                            text = "UNGGULAN",
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(6.dp)
+                                .background(Color.White.copy(alpha = 0.94f), RoundedCornerShape(50))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            color = PrimaryDark,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.W800,
+                            letterSpacing = 0.5.sp,
+                        )
+                    }
                 }
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 13.dp),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.W700,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 3.dp),
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 13.dp),
                 ) {
-                    PhIcon(AppIcons.Location, tint = MutedGray, size = 13.dp)
                     Text(
-                        text = location,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MutedGray,
-                        maxLines = 1,
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.W700,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 3.dp),
                     )
-                }
-                Text(
-                    text = formatRupiah(price),
-                    color = PrimaryDark,
-                    fontWeight = FontWeight.W800,
-                    fontSize = 13.5.sp,
-                    maxLines = 1,
-                    modifier = Modifier.padding(top = 5.dp),
-                )
-                val specs = buildList {
-                    beds?.let { add("${it} KT") }
-                    baths?.let { add("${it} KM") }
-                    landArea?.let { add("LT $it") }
-                }
-                if (specs.isNotEmpty()) {
-                    Text(
-                        text = specs.joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MutedGray,
-                        fontWeight = FontWeight.W600,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 3.dp),
+                    ) {
+                        PhIcon(AppIcons.Location, tint = MutedGray, size = 13.dp)
+                        Text(
+                            text = location,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MutedGray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 3.dp),
+                        )
+                    }
+                    val specs = buildList {
+                        beds?.let { add("${it} KT") }
+                        baths?.let { add("${it} KM") }
+                        landArea?.let { add("LT $it") }
+                    }
+                    if (specs.isNotEmpty()) {
+                        Text(
+                            text = specs.joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MutedGray,
+                            fontWeight = FontWeight.W600,
+                            modifier = Modifier.padding(top = 3.dp),
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .clickable { onFavoriteClick?.invoke() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PhIcon(
+                        name = AppIcons.Favorite,
+                        contentDescription = if (isFavorite) "Hapus dari favorit" else "Tambah ke favorit",
+                        tint = if (isFavorite) FavoriteRed else MutedGray,
+                        weight = if (isFavorite) PhosphorWeight.FILL else PhosphorWeight.REGULAR,
+                        size = 22.dp,
                     )
                 }
             }
-            // Hit area 40dp agar mudah disentuh; ikon tetap 22dp
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .clickable { onFavoriteClick?.invoke() },
-                contentAlignment = Alignment.Center,
-            ) {
-                PhIcon(
-                    name = AppIcons.Favorite,
-                    contentDescription = if (isFavorite) "Hapus dari favorit" else "Tambah ke favorit",
-                    tint = if (isFavorite) FavoriteRed else MutedGray,
-                    weight = if (isFavorite) PhosphorWeight.FILL else PhosphorWeight.REGULAR,
-                    size = 22.dp,
-                )
-            }
+            Text(
+                text = formatRupiah(price),
+                color = PrimaryDark,
+                fontWeight = FontWeight.W800,
+                fontSize = 13.5.sp,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
         }
     }
 }

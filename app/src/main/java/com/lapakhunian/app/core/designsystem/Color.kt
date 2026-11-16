@@ -24,8 +24,8 @@ val RedBg = Color(0xFFFEE2E2)
 val GrayBg = Color(0xFFEEF1F6)
 
 // Aksen brand — dipakai untuk tombol gradasi, chip terpilih, FAB, kartu saldo.
-val GreenBright = Color(0xFF1CB45C)
-val GreenDeep = Color(0xFF0F9C4B)
+val GreenBright = Color(0xFF006D31)
+val GreenDeep = Color(0xFF005226)
 val GreenGradient = Brush.linearGradient(listOf(GreenBright, GreenDeep))
 val FavoriteRed = Color(0xFFEF4444)
 

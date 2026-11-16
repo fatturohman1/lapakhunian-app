@@ -121,6 +121,7 @@ data class ThreadUiState(
     val error: String? = null,
     val sending: Boolean = false,
     val draft: String = "",
+    val failedMessages: List<MessageDto> = emptyList(),
     val disputing: Boolean = false,
 )
 
@@ -170,7 +171,7 @@ class ThreadViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 loading = false,
-                                messages = envelope.data,
+                                messages = envelope.data + it.messages.filter { message -> message.id?.startsWith("temp-") == true },
                                 locked = envelope.locked ?: false,
                                 error = null,
                             )
@@ -198,40 +199,51 @@ class ThreadViewModel @Inject constructor(
         _state.update { it.copy(draft = text) }
     }
 
-    fun send(text: String) {
+    fun send(text: String) = sendMessage(text)
+
+    fun retryFailed(messageId: String) {
+        val message = _state.value.failedMessages.firstOrNull { it.id == messageId } ?: return
+        sendMessage(message.content.orEmpty(), messageId)
+    }
+
+    private fun sendMessage(text: String, retryId: String? = null) {
         val content = text.trim()
-        if (content.isEmpty() || _state.value.sending) return
-        val tempId = "temp-${System.currentTimeMillis()}"
+        if (content.isEmpty() || _state.value.sending || _state.value.locked) return
+        val tempId = "temp-${java.util.UUID.randomUUID()}"
         val optimistic = MessageDto(
             id = tempId,
             content = content,
             createdAt = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
             fromMe = true,
         )
-        // optimis: tampilkan pesan & kosongkan draft sebelum request jalan
         _state.update {
-            it.copy(messages = it.messages + optimistic, draft = "", sending = true)
+            it.copy(
+                messages = it.messages + optimistic,
+                draft = if (retryId == null) "" else it.draft,
+                failedMessages = it.failedMessages.filterNot { message -> message.id == retryId },
+                sending = true,
+                error = null,
+            )
         }
         viewModelScope.launch {
             repo.sendMessage(conversationId, content).fold(
                 onSuccess = { sent ->
-                    // sukses: buang pesan sementara, ganti dengan pesan asli dari server
                     _state.update {
                         it.copy(
                             sending = false,
                             error = null,
-                            messages = it.messages.filterNot { m -> m.id == tempId } + sent,
+                            messages = it.messages.filterNot { m -> m.id == tempId || m.id == sent.id } + sent,
                         )
                     }
                 },
                 onFailure = { e ->
-                    // gagal: buang pesan sementara, kembalikan draft agar teks tidak hilang
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     _state.update {
                         it.copy(
                             sending = false,
                             error = e.message ?: "Gagal mengirim",
                             messages = it.messages.filterNot { m -> m.id == tempId },
-                            draft = content,
+                            failedMessages = it.failedMessages + optimistic,
                         )
                     }
                 },

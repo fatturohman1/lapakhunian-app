@@ -1,6 +1,8 @@
 package com.lapakhunian.app.core.designsystem.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -111,7 +113,7 @@ fun FilterChip(
 ) {
     Box(
         modifier = modifier
-            .clickable(onClick = onClick)
+            .selectable(selected = selected, role = Role.Button, onClick = onClick)
             .then(
                 if (selected) {
                     Modifier.background(GreenGradient, CircleShape)

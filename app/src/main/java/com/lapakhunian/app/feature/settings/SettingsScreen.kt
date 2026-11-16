@@ -15,9 +15,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,20 +39,28 @@ import com.lapakhunian.app.core.designsystem.MutedGray
 import com.lapakhunian.app.core.designsystem.PhIcon
 import com.lapakhunian.app.core.designsystem.PrimaryDark
 import com.lapakhunian.app.core.designsystem.components.BackIconButton
+import com.lapakhunian.app.core.ui.UpdateAvailableDialog
+import com.lapakhunian.app.core.util.UpdateChecker
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenTerms: () -> Unit,
+    isLoggedIn: Boolean,
     onOpenChangePassword: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var checkingUpdate by remember { mutableStateOf(false) }
+    var updateVersion by remember { mutableStateOf<com.lapakhunian.app.core.util.UpdateInfo?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState()),
     ) {
         // Header
         Row(
@@ -72,7 +86,9 @@ fun SettingsScreen(
         }
 
         SettingGroup {
-            SettingRow(AppIcons.Lock, "Ubah Password", "Khusus akun email — Google tak perlu", onClick = onOpenChangePassword)
+            if (isLoggedIn) {
+                SettingRow(AppIcons.Lock, "Ubah Password", "Khusus akun email — Google tak perlu", onClick = onOpenChangePassword)
+            }
             SettingRow(AppIcons.Shield, "Kebijakan Privasi", onClick = onOpenPrivacy)
             SettingRow(AppIcons.Info, "Syarat & Ketentuan", onClick = onOpenTerms)
             SettingRow(AppIcons.Star, "Beri Penilaian", "Bantu kami berkembang di Play Store") {
@@ -88,36 +104,76 @@ fun SettingsScreen(
         }
 
         SettingGroup {
-            // Versi — hanya info, tanpa chevron
+            // Versi — ketuk untuk cek update ke GitHub Releases
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable(enabled = !checkingUpdate) {
+                        checkingUpdate = true
+                        scope.launch {
+                            runCatching { UpdateChecker.check() }
+                                .onSuccess { latest ->
+                                    if (latest != null) {
+                                        updateVersion = latest
+                                    } else {
+                                        Toast.makeText(context, "Sudah versi terbaru (${BuildConfig.VERSION_NAME})", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                .onFailure {
+                                    Toast.makeText(context, "Gagal cek update. Periksa koneksi internet.", Toast.LENGTH_SHORT).show()
+                                }
+                            checkingUpdate = false
+                        }
+                    }
                     .padding(horizontal = 16.dp, vertical = 15.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PhIcon(
-                    AppIcons.Info,
+                    AppIcons.Download,
                     tint = PrimaryDark,
                     size = 21.dp,
                     modifier = Modifier
                         .size(40.dp)
                         .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(13.dp)),
                 )
-                Text(
-                    "Versi Aplikasi",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.W600,
+                Column(
                     modifier = Modifier
                         .weight(1f)
                         .padding(start = 14.dp),
-                )
-                Text(
-                    BuildConfig.VERSION_NAME,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MutedGray,
-                    fontWeight = FontWeight.W700,
-                )
+                ) {
+                    Text(
+                        "Versi Aplikasi",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.W600,
+                    )
+                    Text(
+                        "Ketuk untuk cek update",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MutedGray,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                    Text(
+                        BuildConfig.VERSION_NAME,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MutedGray,
+                        fontWeight = FontWeight.W700,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                if (checkingUpdate) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = PrimaryDark,
+                    )
+                } else {
+                    PhIcon(AppIcons.Chevron, contentDescription = null, tint = ChevronGray, modifier = Modifier.padding(start = 6.dp).size(18.dp))
+                }
             }
+        }
+
+        updateVersion?.let { latest ->
+            UpdateAvailableDialog(version = latest.version, notes = latest.notes, onDismiss = { updateVersion = null })
         }
 
         Box(Modifier.size(1.dp))

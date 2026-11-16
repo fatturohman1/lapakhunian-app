@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
@@ -51,20 +52,16 @@ fun PhIcon(
         modifier.semantics { this.contentDescription = contentDescription }
     } else modifier
 
-    // Sementara: semua weight render REGULAR single-layer (paling stabil).
-    // Box center — glyph PUA phosphor harus center di dalam kotak caller.
-    val regularCp = PhosphorCodepoints.REGULAR[name]
-    val fallbackCp = regularCp
-        ?: PhosphorCodepoints.FILL[name]
-        ?: PhosphorCodepoints.DUO_PRIMARY[name]
-        ?: return
+    val filled = weight == PhosphorWeight.FILL && name in PhosphorCodepoints.FILL
+    val codepoint = (if (filled) PhosphorCodepoints.FILL[name] else PhosphorCodepoints.REGULAR[name]) ?: return
     Box(
         modifier = descModifier,
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = fallbackCp,
-            fontFamily = PhosphorFont.Regular,
+            text = codepoint,
+            modifier = Modifier.clearAndSetSemantics { },
+            fontFamily = if (filled) PhosphorFont.Fill else PhosphorFont.Regular,
             fontSize = spSize,
             lineHeight = spSize,
             fontStyle = FontStyle.Normal,
