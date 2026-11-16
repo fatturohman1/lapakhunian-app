@@ -81,6 +81,13 @@ class PropertyRepository @Inject constructor(
 
     suspend fun trackView(id: String) = runCatching { api.trackView(id) }
 
+    /** Kandidat "Terdekat": satu request limit 100 (cap server); sorting jarak di sisi app. */
+    suspend fun nearbyCandidates(filters: SearchFilters): Result<List<Property>> = runCatching {
+        val res = api.list(filters, page = 1, limit = 100)
+        if (!res.success) throw ApiException(res.error ?: "Gagal memuat properti")
+        res.data.orEmpty().mapNotNull { it.toDomain() }
+    }
+
     suspend fun contactAgent(
         id: String,
         budget: Long?,

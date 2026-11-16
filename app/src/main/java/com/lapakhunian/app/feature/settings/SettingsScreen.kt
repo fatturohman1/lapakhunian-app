@@ -1,8 +1,13 @@
 package com.lapakhunian.app.feature.settings
 
 import android.content.Intent
+import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -19,6 +24,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,8 +35,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import coil3.SingletonImageLoader
 import com.lapakhunian.app.BuildConfig
 import com.lapakhunian.app.core.designsystem.AppIcons
@@ -39,6 +48,7 @@ import com.lapakhunian.app.core.designsystem.MutedGray
 import com.lapakhunian.app.core.designsystem.PhIcon
 import com.lapakhunian.app.core.designsystem.PrimaryDark
 import com.lapakhunian.app.core.designsystem.components.BackIconButton
+import com.lapakhunian.app.core.notifications.LocalNotifier
 import com.lapakhunian.app.core.ui.UpdateAvailableDialog
 import com.lapakhunian.app.core.util.UpdateChecker
 import kotlinx.coroutines.launch
@@ -55,6 +65,20 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     var checkingUpdate by remember { mutableStateOf(false) }
     var updateVersion by remember { mutableStateOf<com.lapakhunian.app.core.util.UpdateInfo?>(null) }
+    var notifEnabled by remember { mutableStateOf(LocalNotifier.canPost(context)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) notifEnabled = LocalNotifier.canPost(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        notifEnabled = granted
+        // Ditolak permanen ("jangan tanya lagi") → bawa ke settings sistem supaya tetap bisa dinyalakan.
+        if (!granted) openNotificationSettings(context)
+    }
 
     Column(
         modifier = Modifier
@@ -86,6 +110,17 @@ fun SettingsScreen(
         }
 
         SettingGroup {
+            SettingRow(
+                AppIcons.Bell,
+                "Notifikasi",
+                if (notifEnabled) "Banner & suara aktif — ketuk untuk kelola" else "Nonaktif — ketuk untuk mengaktifkan",
+            ) {
+                if (notifEnabled || Build.VERSION.SDK_INT < 33) {
+                    openNotificationSettings(context)
+                } else {
+                    notifLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
             if (isLoggedIn) {
                 SettingRow(AppIcons.Lock, "Ubah Password", "Khusus akun email — Google tak perlu", onClick = onOpenChangePassword)
             }
@@ -233,6 +268,19 @@ private fun SettingRow(
 
 // ===== Halaman statis: Kebijakan Privasi & Syarat & Ketentuan =====
 
+private fun openNotificationSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    runCatching { context.startActivity(intent) }
+        .onFailure {
+            runCatching {
+                context.startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")),
+                )
+            }
+        }
+}
+
 @Composable
 fun PrivacyPolicyScreen(onBack: () -> Unit) {
     StaticDocScreen(
@@ -240,7 +288,7 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
         onBack = onBack,
         sections = listOf(
             "LapakHunian menghargai privasi penggunanya. Dokumen ini menjelaskan data apa yang kami proses saat kamu memakai aplikasi.",
-            "Data yang kami kumpulkan — Data akun (nama, email, foto) saat kamu mendaftar; data iklan properti yang kamu unggah; isi percakapan dengan agen; dan data lead (nama, nomor telepon, pesan) yang terkait dengan iklanmu.",
+            "Data yang kami kumpulkan — Data akun (nama, email, foto) saat kamu mendaftar; data iklan properti yang kamu unggah; isi percakapan dengan agen; data lead (nama, nomor telepon, pesan) yang terkait dengan iklanmu; serta lokasi perkiraan perangkat saat kamu memakai fitur Properti terdekat (hanya di perangkat, tidak dikirim ke server).",
             "Penggunaan data — Data digunakan untuk menjalankan fitur aplikasi: menampilkan iklan, menghubungkan pembeli dengan pemilik/agen, mengelola saldo lead, serta meningkatkan kualitas layanan.",
             "Berbagi data — Data iklanmu tampil publik agar dapat dilihat calon pembeli. Data pribadi seperti nomor telepon hanya dibagikan kepada pihak yang telah membuka lead terkait.",
             "Penyimpanan & keamanan — Data tersimpan di server kami dan dilindungi dengan autentikasi token. Kamu dapat keluar dari akun kapan saja melalui menu Profil.",

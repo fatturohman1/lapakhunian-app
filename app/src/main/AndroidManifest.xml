@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Notifikasi lokal chat (worker WorkManager) — runtime permission di Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Fitur "Properti terdekat": coarse one-shot, tidak disimpan/dikirim ke server -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:name=".App"
@@ -42,6 +44,14 @@
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
+            <!-- Payload notification dari server tampil di tray lewat channel ini saat app
+                 background; harus sama dengan LocalNotifier.CHANNEL_CHAT (heads-up). -->
+            <meta-data
+                android:name="com.google.firebase.messaging.default_notification_channel_id"
+                android:value="chat_heads_up" />
+            <meta-data
+                android:name="com.google.firebase.messaging.default_notification_icon"
+                android:resource="@drawable/ic_launcher_foreground_logo" />
         </service>
 
         <!-- Ambil foto kamera di wizard: hasil disimpan lewat FileProvider (cache) -->

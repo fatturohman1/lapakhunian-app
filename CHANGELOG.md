@@ -4,6 +4,30 @@ Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag G
 
 ## Belum dirilis
 
+_Belum ada perubahan._
+
+## 1.0.0-beta.7
+
+### Ditambahkan
+
+- **Properti terdekat** di Jelajah: tombol pin peta mengurutkan listing berdasarkan jarak dari lokasi perangkat dan menampilkan label jarak pada kartu; listing tanpa koordinat ditaruh di akhir.
+- Izin lokasi coarse diminta hanya saat fitur Terdekat dipakai; lokasi dibaca sekali di perangkat dan tidak dikirim ke server.
+- Baris **Notifikasi** di Pengaturan: meminta ulang izin notifikasi bila dulu ditolak, atau membuka pengaturan notifikasi sistem bila sudah aktif.
+
+### Diperbaiki
+
+- Form kontak tidak lagi menampilkan error mentah "Illegal input … $.data.deducted" saat server membalas `deducted` berupa boolean; pengiriman sukses langsung membuka thread chat.
+- Notifikasi chat/lead tampil sebagai banner heads-up bersuara (channel IMPORTANCE_HIGH) ala aplikasi pesan instan, bukan masuk tray diam-diam.
+- Notifikasi FCM saat app background memakai channel heads-up milik app (default channel di manifest), bukan channel fallback FCM.
+- Pesan baru dari percakapan berbeda menumpuk sebagai notifikasi terpisah, bukan saling menggantikan.
+
+### Catatan
+
+- Urutan Terdekat memakai maksimal 100 kandidat dari satu request API (batas server) yang diurutkan di sisi app.
+- Konfigurasi Firebase dan Google Auth tidak diubah.
+
+## 1.0.0-beta.6
+
 ### Ditambahkan
 
 - Cek update manual dengan mengetuk **Pengaturan > Versi Aplikasi**.

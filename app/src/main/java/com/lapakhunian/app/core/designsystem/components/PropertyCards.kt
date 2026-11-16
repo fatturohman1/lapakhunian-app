@@ -161,6 +161,7 @@ fun PropertyListCard(
     compareMode: Boolean = false,
     compareSelected: Boolean = false,
     onCompareToggle: (() -> Unit)? = null,
+    distanceLabel: String? = null,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -232,7 +233,17 @@ fun PropertyListCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 3.dp),
                     ) {
-                        PhIcon(AppIcons.Location, tint = MutedGray, size = 13.dp)
+                        PhIcon(AppIcons.Location, tint = if (distanceLabel != null) PrimaryDark else MutedGray, size = 13.dp)
+                        if (distanceLabel != null) {
+                            Text(
+                                text = "$distanceLabel · ",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = PrimaryDark,
+                                fontWeight = FontWeight.W700,
+                                maxLines = 1,
+                                modifier = Modifier.padding(start = 3.dp),
+                            )
+                        }
                         Text(
                             text = location,
                             style = MaterialTheme.typography.bodySmall,

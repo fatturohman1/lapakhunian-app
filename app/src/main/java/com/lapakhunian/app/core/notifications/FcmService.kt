@@ -26,7 +26,7 @@ class FcmService : FirebaseMessagingService() {
         val title = message.data["title"] ?: message.notification?.title.orEmpty()
         val body = message.data["body"] ?: message.notification?.body.orEmpty()
         if (body.isBlank()) return
-        LocalNotifier.postMessage(this, title, body)
+        LocalNotifier.postMessage(this, title, body, message.data["conversationId"])
     }
 
     override fun onNewToken(token: String) {

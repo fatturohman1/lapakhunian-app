@@ -58,7 +58,7 @@ class CompareTest {
     )
 
     @Test fun compareSelectionCapsAtThreeAndTogglesOff() = runTest(dispatcher) {
-        val vm = ExploreViewModel(mockk(relaxed = true), session, mockk<GuestFavoritesStore>(relaxed = true))
+        val vm = ExploreViewModel(mockk(relaxed = true), session, mockk<GuestFavoritesStore>(relaxed = true), mockk(relaxed = true))
             .also { store.put("explore", it) }
         runCurrent()
         (1..4).forEach { vm.toggleCompare(property("p$it", 100L * it)) }

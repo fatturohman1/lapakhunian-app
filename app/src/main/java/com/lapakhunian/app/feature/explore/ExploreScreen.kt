@@ -1,5 +1,10 @@
 package com.lapakhunian.app.feature.explore
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -14,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -38,8 +44,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
@@ -58,6 +66,8 @@ import com.lapakhunian.app.core.designsystem.PhIcon
 import com.lapakhunian.app.core.domain.model.Property
 import com.lapakhunian.app.core.domain.model.PropertyCategory
 import com.lapakhunian.app.core.network.SearchFilters
+import com.lapakhunian.app.core.util.distanceKm
+import com.lapakhunian.app.core.util.formatDistance
 import com.lapakhunian.app.core.util.formatRupiah
 
 // Nilai kota = nilai `city` aktual di database (sama dengan web, city-alias.ts) —
@@ -90,9 +100,21 @@ fun ExploreScreen(
     val query by viewModel.query.collectAsState()
     val favIds by viewModel.favIds.collectAsState()
     val compareSelection by viewModel.compareSelection.collectAsState()
+    val nearbyItems by viewModel.nearbyItems.collectAsState()
+    val nearbyOrigin by viewModel.nearbyOrigin.collectAsState()
+    val nearbyError by viewModel.nearbyError.collectAsState()
+    val nearbyLoading by viewModel.nearbyLoading.collectAsState()
     var compareMode by remember { mutableStateOf(false) }
     val paging = viewModel.properties.collectAsLazyPagingItems()
     var showFilterSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            viewModel.toggleNearby()
+        } else {
+            Toast.makeText(context, "Izin lokasi ditolak — fitur Terdekat butuh izin lokasi.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     androidx.compose.runtime.LaunchedEffect(initialCategory) {
         viewModel.setInitialCategory(initialCategory)
@@ -117,6 +139,33 @@ fun ExploreScreen(
                 modifier = Modifier.padding(start = 12.dp),
             )
             Box(Modifier.weight(1f))
+            // Urutan terdekat dari lokasi perangkat (izin coarse, one-shot)
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(if (nearbyItems != null) TintGreen else Color.Transparent)
+                    .clickable {
+                        if (nearbyItems != null) {
+                            viewModel.toggleNearby()
+                        } else if (
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+                            PackageManager.PERMISSION_GRANTED
+                        ) {
+                            viewModel.toggleNearby()
+                        } else {
+                            locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                PhIcon(
+                    AppIcons.Location,
+                    contentDescription = "Properti terdekat",
+                    tint = if (nearbyItems != null) PrimaryDark else MaterialTheme.colorScheme.onSurface,
+                    size = 22.dp,
+                )
+            }
             // Mode bandingkan: pilih 2-3 kartu lalu buka layar pembanding
             Box(
                 modifier = Modifier
@@ -205,8 +254,31 @@ fun ExploreScreen(
             }
         }
 
+        nearbyError?.let { message ->
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f),
+                )
+                androidx.compose.material3.TextButton(onClick = viewModel::dismissNearbyError) { Text("Tutup") }
+            }
+        }
+
         // Jumlah hasil hanya tampil setelah refresh selesai (hindari "0 properti ditemukan" saat loading)
-        if (paging.loadState.refresh is LoadState.NotLoading) {
+        if (nearbyItems != null) {
+            Text(
+                text = "${nearbyItems?.size ?: 0} properti · urut terdekat dari lokasimu",
+                style = MaterialTheme.typography.labelMedium,
+                color = MutedGray,
+                fontWeight = FontWeight.W600,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+            )
+        } else if (paging.loadState.refresh is LoadState.NotLoading) {
             Text(
                 text = "${paging.itemCount} properti ditemukan",
                 style = MaterialTheme.typography.labelMedium,
@@ -219,11 +291,30 @@ fun ExploreScreen(
         // Tarik ke bawah untuk muat ulang hasil pencarian
         PullToRefreshBox(
             modifier = Modifier.weight(1f),
-            isRefreshing = paging.loadState.refresh is LoadState.Loading && paging.itemCount > 0,
-            onRefresh = { paging.refresh() },
+            isRefreshing = nearbyLoading ||
+                (paging.loadState.refresh is LoadState.Loading && paging.itemCount > 0),
+            onRefresh = {
+                paging.refresh()
+                viewModel.retryNearby()
+            },
         ) {
             val refresh = paging.loadState.refresh
             when {
+                nearbyItems != null -> NearbyList(
+                    items = nearbyItems.orEmpty(),
+                    origin = nearbyOrigin,
+                    favIds = favIds,
+                    onOpenDetail = onOpenDetail,
+                    onFavoriteClick = { property -> viewModel.toggleFavorite(property) },
+                    compareMode = compareMode,
+                    selectedIds = compareSelection.map { it.id }.toSet(),
+                    onToggleCompare = viewModel::toggleCompare,
+                )
+                nearbyLoading -> {
+                    Column(Modifier.fillMaxSize()) {
+                        repeat(5) { PropertyCardSkeleton() }
+                    }
+                }
                 refresh is LoadState.Loading && paging.itemCount == 0 -> {
                     Column(Modifier.fillMaxSize()) {
                         repeat(5) { PropertyCardSkeleton() }
@@ -358,6 +449,65 @@ private fun PropertyList(
                 )
             }
             else -> Unit
+        }
+        item { Box(Modifier.size(16.dp)) }
+    }
+}
+
+@Composable
+private fun NearbyList(
+    items: List<Property>,
+    origin: Pair<Double, Double>?,
+    favIds: Set<String>,
+    onOpenDetail: (String) -> Unit,
+    onFavoriteClick: (Property) -> Unit,
+    compareMode: Boolean,
+    selectedIds: Set<String>,
+    onToggleCompare: (Property) -> Unit,
+) {
+    if (items.isEmpty()) {
+        EmptyState(
+            title = "Tidak ada hasil",
+            message = "Coba ubah filter atau kata kunci pencarian.",
+            icon = AppIcons.Search,
+        )
+        return
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            horizontal = 20.dp,
+            vertical = 4.dp,
+        ),
+    ) {
+        items(items, key = { it.id }) { property ->
+            val lat = property.latitude
+            val lon = property.longitude
+            val distanceLabel = if (origin != null && lat != null && lon != null) {
+                formatDistance(distanceKm(origin.first, origin.second, lat, lon))
+            } else {
+                null
+            }
+            PropertyListCard(
+                title = property.title,
+                location = listOfNotNull(property.city, property.certificate).joinToString(" · "),
+                price = property.price,
+                imageUrl = property.images.firstOrNull(),
+                beds = property.bedrooms,
+                baths = property.bathrooms,
+                landArea = property.landArea,
+                categoryIcon = property.category?.icon() ?: AppIcons.CategoryHouse,
+                isFeatured = property.isFeatured,
+                isFavorite = property.id in favIds,
+                seed = property.id.hashCode(),
+                onFavoriteClick = { onFavoriteClick(property) },
+                onClick = { onOpenDetail(property.id) },
+                compareMode = compareMode,
+                compareSelected = property.id in selectedIds,
+                onCompareToggle = { onToggleCompare(property) },
+                distanceLabel = distanceLabel,
+            )
         }
         item { Box(Modifier.size(16.dp)) }
     }

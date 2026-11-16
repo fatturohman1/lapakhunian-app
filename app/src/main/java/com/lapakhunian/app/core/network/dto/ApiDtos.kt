@@ -127,7 +127,7 @@ data class RegisterResponseDto(
 data class ContactResponseDto(
     val conversationId: String? = null,
     val leadCost: Int? = null,
-    val deducted: Int? = null,
+    val deducted: Boolean? = null,
     val hasUnlimitedChat: Boolean? = null,
     val message: String? = null,
 )

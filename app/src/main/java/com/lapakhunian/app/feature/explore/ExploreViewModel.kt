@@ -9,7 +9,9 @@ import com.lapakhunian.app.core.data.local.toSnapshot
 import com.lapakhunian.app.core.data.repository.PropertyRepository
 import com.lapakhunian.app.core.data.session.SessionManager
 import com.lapakhunian.app.core.domain.model.Property
+import com.lapakhunian.app.core.location.DeviceLocator
 import com.lapakhunian.app.core.network.SearchFilters
+import com.lapakhunian.app.core.util.distanceKm
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -32,6 +34,7 @@ class ExploreViewModel @Inject constructor(
     private val repo: PropertyRepository,
     private val session: SessionManager,
     private val guest: GuestFavoritesStore,
+    private val locator: DeviceLocator,
 ) : ViewModel() {
 
     private val _filters = MutableStateFlow(SearchFilters())
@@ -71,11 +74,13 @@ class ExploreViewModel @Inject constructor(
 
     fun update(transform: (SearchFilters) -> SearchFilters) {
         _filters.value = transform(_filters.value)
+        if (_nearbyItems.value != null) loadNearby()
     }
 
     fun applyFilters(filters: SearchFilters) {
         _query.value = filters.search
         _filters.value = filters
+        if (_nearbyItems.value != null) loadNearby()
     }
 
     fun resetFilters() = applyFilters(SearchFilters())
@@ -127,5 +132,78 @@ class ExploreViewModel @Inject constructor(
 
     fun clearCompare() {
         _compareSelection.value = emptyList()
+    }
+
+    // ===== Properti terdekat (izin lokasi coarse, one-shot, tidak dikirim ke server) =====
+
+    private val _nearbyItems = MutableStateFlow<List<Property>?>(null)
+    val nearbyItems: StateFlow<List<Property>?> = _nearbyItems.asStateFlow()
+
+    private val _nearbyOrigin = MutableStateFlow<Pair<Double, Double>?>(null)
+    val nearbyOrigin: StateFlow<Pair<Double, Double>?> = _nearbyOrigin.asStateFlow()
+
+    private val _nearbyError = MutableStateFlow<String?>(null)
+    val nearbyError: StateFlow<String?> = _nearbyError.asStateFlow()
+
+    private val _nearbyLoading = MutableStateFlow(false)
+    val nearbyLoading: StateFlow<Boolean> = _nearbyLoading.asStateFlow()
+
+    /** null items = mode paging biasa; toggle kedua mematikan mode terdekat. */
+    fun toggleNearby() {
+        if (_nearbyItems.value != null || _nearbyLoading.value) {
+            _nearbyItems.value = null
+            _nearbyOrigin.value = null
+            _nearbyError.value = null
+            return
+        }
+        _nearbyLoading.value = true
+        _nearbyError.value = null
+        viewModelScope.launch {
+            val origin = locator.lastKnown()
+            if (origin == null) {
+                _nearbyError.value = "Lokasi perangkat tidak tersedia. Aktifkan lokasi/GPS lalu coba lagi."
+            } else {
+                _nearbyOrigin.value = origin
+                fetchNearby(origin)
+            }
+            _nearbyLoading.value = false
+        }
+    }
+
+    fun retryNearby() {
+        if (_nearbyOrigin.value != null) loadNearby()
+    }
+
+    fun dismissNearbyError() {
+        _nearbyError.value = null
+    }
+
+    private fun loadNearby() {
+        val origin = _nearbyOrigin.value ?: return
+        _nearbyLoading.value = true
+        _nearbyError.value = null
+        viewModelScope.launch {
+            fetchNearby(origin)
+            _nearbyLoading.value = false
+        }
+    }
+
+    private suspend fun fetchNearby(origin: Pair<Double, Double>) {
+        repo.nearbyCandidates(_filters.value).fold(
+            onSuccess = { list ->
+                _nearbyItems.value = list.sortedWith(
+                    compareBy<Property> { it.latitude == null || it.longitude == null }
+                        .thenBy { p ->
+                            val lat = p.latitude
+                            val lon = p.longitude
+                            if (lat == null || lon == null) Double.MAX_VALUE
+                            else distanceKm(origin.first, origin.second, lat, lon)
+                        },
+                )
+            },
+            onFailure = {
+                _nearbyError.value = "Gagal memuat properti terdekat. Periksa koneksi lalu coba lagi."
+            },
+        )
     }
 }

@@ -15,7 +15,9 @@ import com.lapakhunian.app.R
 
 /** Notifikasi lokal (channel + posting) — pengganti FCM sementara di beta. */
 object LocalNotifier {
-    const val CHANNEL_CHAT = "chat"
+    /** heads-up ala WhatsApp; id baru karena importance channel lama tak bisa di-upgrade in-place. */
+    const val CHANNEL_CHAT = "chat_heads_up"
+    private const val LEGACY_CHANNEL = "chat"
 
     /** Extra di Intent MainActivity: buka tab Chat saat notifikasi ditap. */
     const val EXTRA_OPEN_CHAT = "open_chat"
@@ -25,10 +27,11 @@ object LocalNotifier {
 
     fun ensureChannel(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.deleteNotificationChannel(LEGACY_CHANNEL)
         val channel = NotificationChannel(
             CHANNEL_CHAT,
             "Pesan & Lead",
-            NotificationManager.IMPORTANCE_DEFAULT,
+            NotificationManager.IMPORTANCE_HIGH,
         ).apply { description = "Notifikasi pesan baru dan lead di LapakHunian" }
         manager.createNotificationChannel(channel)
     }
@@ -45,7 +48,7 @@ object LocalNotifier {
     /**
      * Notifikasi umum dari FCM (data payload { title, body }) — tap → tab Chat.
      */
-    fun postMessage(context: Context, title: String, body: String) {
+    fun postMessage(context: Context, title: String, body: String, conversationId: String? = null) {
         if (!canPost(context)) return
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -66,7 +69,9 @@ object LocalNotifier {
             .setContentIntent(pending)
             .setAutoCancel(true)
             .build()
-        runCatching { NotificationManagerCompat.from(context).notify(NOTIF_ID_FCM, notif) }
+        // Satu notifikasi per percakapan (menumpuk ala WhatsApp), bukan saling menggantikan.
+        val id = conversationId?.hashCode() ?: NOTIF_ID_FCM
+        runCatching { NotificationManagerCompat.from(context).notify(id, notif) }
     }
 
     /**
