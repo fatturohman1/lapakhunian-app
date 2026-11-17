@@ -15,6 +15,7 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpHeaders
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import io.mockk.every
@@ -28,6 +29,10 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -92,5 +97,48 @@ class ContactResponseParseTest {
             assertTrue(vm.state.value.success)
             assertEquals("2ec15817-8fba-4122-95a9-b2b562f6ab2a", opened)
         } finally { client.close() }
+    }
+
+    private suspend fun kotlinx.coroutines.test.TestScope.sendContact(budgetText: String): Pair<JsonObject?, ContactViewModel> {
+        var captured: JsonObject? = null
+        val client = HttpClient(MockEngine(io.ktor.client.engine.mock.MockEngineConfig().apply {
+            dispatcher = this@ContactResponseParseTest.dispatcher
+            addHandler { request ->
+                captured = (request.body as? TextContent)?.text?.let {
+                    productionJson.parseToJsonElement(it).jsonObject
+                }
+                respond(CONTACT_PAYLOAD, headers = headersOf(HttpHeaders.ContentType, "application/json"))
+            }
+        })) { install(ContentNegotiation) { json(productionJson) } }
+        try {
+            val session = mockk<SessionManager>()
+            every { session.tokenFlow } returns MutableStateFlow<String?>("token")
+            val repo = PropertyRepository(
+                PropertyApi(client, "https://api.example.test"),
+                mockk<PropertyDao>(relaxed = true),
+                session,
+                mockk<NotificationPrefs>(relaxed = true),
+            )
+            val vm = ContactViewModel(SavedStateHandle(mapOf("propertyId" to "p1")), repo)
+                .also { store.put("contact", it) }
+            vm.send(budgetText, "soon", "test chat apk") {}
+            runCurrent()
+            return captured to vm
+        } finally { client.close() }
+    }
+
+    @Test fun `numeric budget serializes as JSON number and contact succeeds`() = runTest(dispatcher) {
+        val (body, vm) = sendContact("99000")
+        assertNull(vm.state.value.error)
+        assertTrue(vm.state.value.success)
+        assertEquals(99000L, body?.get("budget")?.jsonPrimitive?.longOrNull)
+        assertEquals("soon", body?.get("timeline")?.jsonPrimitive?.content)
+    }
+
+    @Test fun `invalid budget text sends null budget and contact succeeds`() = runTest(dispatcher) {
+        val (body, vm) = sendContact("test ct")
+        assertNull(vm.state.value.error)
+        assertTrue(vm.state.value.success)
+        assertNull(body?.get("budget")?.jsonPrimitive?.longOrNull)
     }
 }

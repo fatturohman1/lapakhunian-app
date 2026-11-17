@@ -4,6 +4,7 @@ import com.lapakhunian.app.core.network.dto.AgentDto
 import com.lapakhunian.app.core.network.dto.AgentLeadsDto
 import com.lapakhunian.app.core.network.dto.ApiEnvelope
 import com.lapakhunian.app.core.network.dto.ConversationDto
+import com.lapakhunian.app.core.network.dto.ContactRequestDto
 import com.lapakhunian.app.core.network.dto.ContactResponseDto
 import com.lapakhunian.app.core.network.dto.LeadWaDto
 import com.lapakhunian.app.core.network.dto.LeadWaUnlockDto
@@ -90,7 +91,7 @@ class PropertyApi @Inject constructor(
         message: String,
     ): ApiEnvelope<ContactResponseDto> = client.post("$baseUrl/api/properties/$id/contact") {
         contentType(ContentType.Application.Json)
-        setBody(mapOf("budget" to budget, "timeline" to timeline, "message" to message))
+        setBody(ContactRequestDto(budget = budget, timeline = timeline, message = message))
     }.body()
 
     /** Kontak publik tanpa login — nama + nomor WA (endpoint sama dengan web, anti-spam di server). */

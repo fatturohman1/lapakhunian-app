@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lapakhunian.app.core.data.repository.ApiException
 import com.lapakhunian.app.core.data.repository.PropertyRepository
-import com.lapakhunian.app.core.notifications.NotificationPrefs
+import com.lapakhunian.app.core.notifications.PushTokenRegistrar
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,17 +27,14 @@ data class AuthUiState(
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val repo: PropertyRepository,
-    private val notifPrefs: NotificationPrefs,
+    private val pushTokenRegistrar: PushTokenRegistrar,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
 
-    /** Registrasi token FCM buffer ke server setelah sesi tersimpan — non-kritis. */
     private fun registerPushToken() {
-        notifPrefs.fcmToken?.let { token ->
-            viewModelScope.launch { repo.registerDeviceToken(token) }
-        }
+        viewModelScope.launch { pushTokenRegistrar.sync() }
     }
 
     fun login(email: String, password: String, onSuccess: () -> Unit) {

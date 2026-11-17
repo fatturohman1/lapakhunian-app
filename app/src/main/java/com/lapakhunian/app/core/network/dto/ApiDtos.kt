@@ -124,6 +124,13 @@ data class RegisterResponseDto(
 )
 
 @Serializable
+data class ContactRequestDto(
+    val budget: Long? = null,
+    val timeline: String,
+    val message: String,
+)
+
+@Serializable
 data class ContactResponseDto(
     val conversationId: String? = null,
     val leadCost: Int? = null,

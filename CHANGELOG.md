@@ -2,9 +2,24 @@
 
 Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag Git yang tersedia; bagian **Belum dirilis** berisi perubahan lokal yang belum masuk ke APK rilis.
 
-## Belum dirilis
+## 1.0.0-beta.8
 
-_Belum ada perubahan._
+### Diperbaiki
+
+- Form kontak dengan budget angka (mis. 99000) tidak lagi gagal kirim dengan error
+  "Serializing collections of different element types"; request kini memakai DTO bertipe
+  jelas sehingga budget dikirim sebagai JSON number sesuai kontrak server.
+- Metadata channel notifikasi FCM dipindah ke level `<application>` di manifest (sebelumnya
+  salah di dalam `<service>`); notifikasi background kini memakai channel heads-up yang benar.
+- Token push FCM diregistrasi ulang saat aplikasi dibuka (jika sudah login) dan setelah login,
+  termasuk ketika token cached hilang setelah logout; sebelumnya token tidak pernah dikirim
+  ulang sampai Firebase kebetulan memanggil onNewToken.
+- Registrasi token di FcmService tidak lagi memblokir thread dengan runBlocking.
+
+### Catatan
+
+- Konfigurasi Firebase dan Google Auth tidak diubah.
+- Agen ke agen tetap bisa chat; error sebelumnya bukan pembatasan peran melainkan bug serialisasi.
 
 ## 1.0.0-beta.7
 

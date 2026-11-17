@@ -2,7 +2,7 @@ package com.lapakhunian.app
 
 import androidx.lifecycle.ViewModelStore
 import com.lapakhunian.app.core.data.repository.PropertyRepository
-import com.lapakhunian.app.core.notifications.NotificationPrefs
+import com.lapakhunian.app.core.notifications.PushTokenRegistrar
 import com.lapakhunian.app.feature.auth.AuthViewModel
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -34,7 +34,7 @@ class AccountRecoveryTest {
 
     @Before fun setUp() {
         Dispatchers.setMain(dispatcher)
-        vm = AuthViewModel(repo, mockk<NotificationPrefs>()).also { store.put("auth", it) }
+        vm = AuthViewModel(repo, mockk<PushTokenRegistrar>(relaxed = true)).also { store.put("auth", it) }
     }
     @After fun tearDown() { store.clear(); Dispatchers.resetMain() }
 
