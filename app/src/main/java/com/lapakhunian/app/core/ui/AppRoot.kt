@@ -35,6 +35,7 @@ import com.lapakhunian.app.core.designsystem.PhIcon
 import com.lapakhunian.app.core.designsystem.PhosphorWeight
 import com.lapakhunian.app.core.designsystem.PrimaryDark
 import com.lapakhunian.app.core.designsystem.TintGreen
+import com.lapakhunian.app.core.util.NotificationLinkMapper
 import com.lapakhunian.app.feature.auth.LoginScreen
 import com.lapakhunian.app.feature.auth.RegisterScreen
 import com.lapakhunian.app.feature.auth.RolePickerScreen
@@ -372,7 +373,23 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
             composable(Routes.NOTIFICATIONS) {
                 NotificationsScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenThread = { navController.navigate("thread/$it") },
+                    onOpenLink = { link ->
+                        // Klik notifikasi = tandai dibaca (di layar) + menuju tujuan native
+                        when (val dest = NotificationLinkMapper.resolve(link)) {
+                            is NotificationLinkMapper.Destination.Thread ->
+                                navController.navigate("thread/${dest.conversationId}")
+                            NotificationLinkMapper.Destination.ChatTab -> navController.navigate(Routes.CHAT) {
+                                popUpTo(Routes.HOME)
+                                launchSingleTop = true
+                            }
+                            NotificationLinkMapper.Destination.AgentLeads -> navController.navigate("agent-leads")
+                            is NotificationLinkMapper.Destination.Property ->
+                                navController.navigate("detail/${dest.propertyId}")
+                            NotificationLinkMapper.Destination.Help -> navController.navigate("help")
+                            NotificationLinkMapper.Destination.History -> navController.navigate("history")
+                            null -> Unit // link tak dikenal: cukup tandai dibaca
+                        }
+                    },
                 )
             }
             composable(Routes.FAVORITES) {
@@ -471,6 +488,12 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                     onBack = { navController.popBackStack() },
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
                     onOpenDetail = { navController.navigate("detail/$it") },
+                    onEditProfile = { navController.navigate("agent-profile-edit") },
+                )
+            }
+            composable("agent-profile-edit") {
+                com.lapakhunian.app.feature.dashboard.AgentProfileEditScreen(
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable("compensation") {

@@ -237,6 +237,7 @@ data class AgentDto(
     val email: String? = null,
     val phone: String? = null,
     val image: String? = null,
+    val banner: String? = null,
     val bio: String? = null,
     val company: String? = null,
     val licenseNumber: String? = null,

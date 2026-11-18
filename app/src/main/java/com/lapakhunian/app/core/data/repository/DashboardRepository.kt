@@ -106,6 +106,14 @@ class DashboardRepository @Inject constructor(
         res.data ?: throw ApiException("Respon tidak valid")
     }
 
+    /** Edit profil agen (bio, phone, company, licenseNumber, image, banner). */
+    suspend fun updateAgentProfile(body: Map<String, Any?>): Result<AgentDto> = runCatching {
+        requireAuth()
+        val res = api.updateAgentProfile(body)
+        if (!res.success) throw ApiException(res.error ?: "Gagal menyimpan profil agen")
+        res.data ?: throw ApiException("Respon tidak valid")
+    }
+
     suspend fun agentLeads(): Result<AgentLeadsDto> = runCatching {
         requireAuth()
         val res = api.agentLeads()

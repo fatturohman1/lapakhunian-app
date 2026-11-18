@@ -63,7 +63,9 @@ fun PhIcon(
             modifier = Modifier.clearAndSetSemantics { },
             fontFamily = if (filled) PhosphorFont.Fill else PhosphorFont.Regular,
             fontSize = spSize,
-            lineHeight = spSize,
+            // lineHeight > fontSize: glyph Phosphor punya extent > 1em — line box 1em
+            // memotong bagian atas/bawah glyph (keluhan "icon terpotong")
+            lineHeight = spSize * 1.35f,
             fontStyle = FontStyle.Normal,
             color = tint,
         )

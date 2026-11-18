@@ -199,6 +199,13 @@ class PropertyApi @Inject constructor(
             setBody(body)
         }.body()
 
+    /** PATCH /api/agent/profile — body {bio?, phone?, company?, licenseNumber?, image?, banner?}; data kembali AgentDto. */
+    suspend fun updateAgentProfile(body: Map<String, Any?>): ApiEnvelope<AgentDto> =
+        client.patch("$baseUrl/api/agent/profile") {
+            contentType(ContentType.Application.Json)
+            setBody(body)
+        }.body()
+
     // ===== Dashboard: upload, listing owner, agent, transaksi =====
 
     suspend fun uploadImage(bytes: ByteArray, filename: String, mime: String): UploadResponse {

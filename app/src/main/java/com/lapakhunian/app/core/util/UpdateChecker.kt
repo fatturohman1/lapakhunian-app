@@ -16,8 +16,10 @@ data class UpdateInfo(val version: String, val notes: String)
 
 object UpdateChecker {
 
-    const val DOWNLOAD_URL =
-        "https://github.com/fatturohman1/lapakhunian-app/releases/latest/download/lapakhunian-beta.apk"
+    // Unduhan lewat proxy web lapakhunian.com/app/download (menyajikan APK release terbaru
+    // dengan Content-Disposition benar) — bukan link GitHub langsung, agar URL yang dilihat
+    // user tetap di domain brand. Cek versi sendiri tetap dari GitHub API (tak terlihat user).
+    const val DOWNLOAD_URL = "https://lapakhunian.com/app/download"
 
     private const val LATEST_RELEASE_API =
         "https://api.github.com/repos/fatturohman1/lapakhunian-app/releases/latest"

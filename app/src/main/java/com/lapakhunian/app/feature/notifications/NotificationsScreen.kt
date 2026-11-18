@@ -139,7 +139,7 @@ class NotificationsViewModel @Inject constructor(
 @Composable
 fun NotificationsScreen(
     onBack: () -> Unit,
-    onOpenThread: (String) -> Unit = {},
+    onOpenLink: (String?) -> Unit = {},
     viewModel: NotificationsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -199,11 +199,8 @@ fun NotificationsScreen(
                 itemsIndexed(state.items, key = { idx, notif -> notif.id ?: "notif-$idx" }) { _, notif ->
                     NotificationItem(notif) {
                         viewModel.markRead(notif)
-                        // link web bentuknya "/dashboard/chat/{conversationId}" — ambil segmen terakhir
-                        val segment = notif.link?.trim()?.split('/')?.lastOrNull { it.isNotBlank() }
-                        if (segment != null && segment.length > 8 && !segment.equals("chat", ignoreCase = true)) {
-                            onOpenThread(segment)
-                        }
+                        // link web ("/dashboard/...") dipetakan ke route native di AppRoot
+                        onOpenLink(notif.link)
                     }
                 }
             }

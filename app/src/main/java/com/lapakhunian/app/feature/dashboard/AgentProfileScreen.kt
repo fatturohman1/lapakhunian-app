@@ -79,7 +79,7 @@ class AgentProfileViewModel @Inject constructor(
     private val _state = MutableStateFlow(AgentProfileUiState())
     val state: StateFlow<AgentProfileUiState> = _state.asStateFlow()
 
-    init { viewModelScope.launch { load() } }
+    // Tidak load di init — layar memuat via ON_RESUME (agar refresh setelah kembali dari edit)
 
     suspend fun load() {
         if (session.token() == null) {
@@ -115,9 +115,20 @@ fun AgentProfileScreen(
     onBack: () -> Unit,
     onGoLogin: () -> Unit,
     onOpenDetail: (String) -> Unit = {},
+    onEditProfile: () -> Unit = {},
     viewModel: AgentProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+
+    // Muat/refresh tiap layar kembali tampil — setelah edit tersimpan profil langsung segar
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewModel.retry()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Column(
         modifier = Modifier
@@ -140,7 +151,8 @@ fun AgentProfileScreen(
                 AgentProfileTopBar(onBack, titleColor = MaterialTheme.colorScheme.onSurface)
                 EmptyState(title = "Bukan akun agen", message = "Profil agen tersedia untuk akun agen.", icon = AppIcons.Business)
             }
-            state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Loading hanya full-screen saat belum ada data — refresh saat resume tidak meng-flash
+            state.loading && state.agent == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Memuat…", color = MutedGray)
             }
             state.error != null && state.agent == null -> {
@@ -155,22 +167,27 @@ fun AgentProfileScreen(
             else -> {
                 val agent = state.agent
 
-                // Banner + appbar overlay (referensi: pager header dengan appbar transparan)
+                // Banner + appbar overlay (referensi: pager header dengan appbar transparan);
+                // banner custom agen bila ada, fallback gradient hijau brand
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp)
                         .background(Brush.linearGradient(listOf(Color(0xFF10B981), Color(0xFF0C8A44)))),
                 ) {
-                    agent?.image?.takeIf { it.isNotBlank() }?.let { img ->
+                    agent?.banner?.takeIf { it.isNotBlank() }?.let { bnr ->
                         AsyncImage(
-                            model = ApiConfig.absoluteUrl(img),
-                            contentDescription = "Foto agen",
+                            model = ApiConfig.absoluteUrl(bnr),
+                            contentDescription = "Banner agen",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
-                    AgentProfileTopBar(onBack, titleColor = Color.White)
+                    AgentProfileTopBar(
+                        onBack,
+                        titleColor = Color.White,
+                        onEdit = onEditProfile,
+                    )
                 }
 
                 // Avatar + nama + URL profil publik + badge tier
@@ -284,7 +301,7 @@ fun AgentProfileScreen(
 }
 
 @Composable
-private fun AgentProfileTopBar(onBack: () -> Unit, titleColor: Color) {
+private fun AgentProfileTopBar(onBack: () -> Unit, titleColor: Color, onEdit: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -311,8 +328,27 @@ private fun AgentProfileTopBar(onBack: () -> Unit, titleColor: Color) {
             color = titleColor,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.W800,
-            modifier = Modifier.padding(start = 12.dp),
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp),
         )
+        if (onEdit != null) {
+            // Edit profil agen — bio/phone/company/license/banner (sama dengan dashboard web)
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onEdit),
+                contentAlignment = Alignment.Center,
+            ) {
+                PhIcon(
+                    AppIcons.Edit,
+                    tint = titleColor,
+                    contentDescription = "Edit profil agen",
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
     }
 }
 

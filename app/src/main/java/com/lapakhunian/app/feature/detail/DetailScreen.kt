@@ -272,42 +272,7 @@ fun DetailScreen(
                             )
                         }
 
-                        SectionHeader("Lokasi", modifier = Modifier.padding(top = 24.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(150.dp)
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(Brush.linearGradient(listOf(Color(0xFFDFE9F6), Color(0xFFCFDFF0))))
-                                .clickable {
-                                    val intent = if (property.latitude != null && property.longitude != null) {
-                                        Intent(Intent.ACTION_VIEW, Uri.parse("geo:${property.latitude},${property.longitude}?z=17"))
-                                    } else {
-                                        Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(addressLine)}"))
-                                    }
-                                    runCatching { context.startActivity(intent) }.onFailure {
-                                        runCatching {
-                                            context.startActivity(
-                                                Intent(Intent.ACTION_VIEW, Uri.parse("https://maps.google.com/?q=${Uri.encode(addressLine)}")),
-                                            )
-                                        }
-                                    }
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                PhIcon(AppIcons.Location, contentDescription = null, tint = Color(0xFF33506E), modifier = Modifier.size(30.dp))
-                                Text(
-                                    (if (property.latitude != null && property.longitude != null) {
-                                        "Peta lokasi · ${property.latitude}, ${property.longitude}"
-                                    } else {
-                                        "Koordinat tidak tersedia"
-                                    }) + " · Ketuk untuk buka peta",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = Color(0xFF33506E),
-                                )
-                            }
-                        }
+                        // Map hanya di web — app cukup alamat + chips; ketuk alamat nanti via fitur terpisah bila perlu
 
                         SectionHeader("Dipasang oleh", modifier = Modifier.padding(top = 24.dp))
                         Row(
