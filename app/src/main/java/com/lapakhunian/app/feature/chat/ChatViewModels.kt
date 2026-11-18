@@ -51,16 +51,44 @@ class ChatListViewModel @Inject constructor(
 
     private var pollJob: Job? = null
 
+    /** Layar Chat terlihat? false = VM hanya untuk badge tab Chat → polling lebih lambat. */
+    private var screenVisible = false
+
     init {
         // polling hanya jalan saat proses di foreground (STARTED); berhenti saat background
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) { startPolling() }
             override fun onStop(owner: LifecycleOwner) { stopPolling() }
         })
-        // cold start: proses sudah STARTED sebelum observer terpasang, jadi start manual
-        if (ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            startPolling()
+        // VM activity-scoped (badge tab Chat + layar Chat): ikuti login/logout —
+        // polling restart tiap token berganti, bukan dicek sekali di init.
+        viewModelScope.launch {
+            session.tokenFlow.collect { token ->
+                if (token == null) {
+                    stopPolling()
+                    notifPrefs.knownUnread = 0
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            needsLogin = true,
+                            items = emptyList(),
+                            waLeads = emptyList(),
+                            totalUnread = 0,
+                            error = null,
+                        )
+                    }
+                } else if (ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                    startPolling()
+                }
+            }
         }
+    }
+
+    /** Dipanggil layar Chat: visible → 5 dtk, tersembunyi (badge saja) → 30 dtk hemat trafik. */
+    fun setScreenVisible(visible: Boolean) {
+        if (screenVisible == visible) return
+        screenVisible = visible
+        if (session.tokenFlow.value != null) startPolling()
     }
 
     private fun startPolling() {
@@ -71,7 +99,7 @@ class ChatListViewModel @Inject constructor(
                 _state.update { it.copy(loading = false, needsLogin = true, items = emptyList()) }
                 return@launch
             }
-            repo.conversations().collect { res ->
+            repo.conversations(if (screenVisible) 5_000L else 30_000L).collect { res ->
                 // lead WhatsApp ikut disegarkan tiap siklus polling; bukan agen → kosong
                 val waLeads = dashboardRepo.leadWaList().getOrNull().orEmpty()
                 res.fold(

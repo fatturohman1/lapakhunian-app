@@ -51,6 +51,7 @@ import com.lapakhunian.app.core.designsystem.components.BackIconButton
 import com.lapakhunian.app.core.designsystem.components.EmptyState
 import com.lapakhunian.app.core.designsystem.components.InitialAvatar
 import com.lapakhunian.app.core.designsystem.PhIcon
+import com.lapakhunian.app.core.designsystem.PhosphorWeight
 import com.lapakhunian.app.core.network.dto.ConversationDto
 import com.lapakhunian.app.core.network.dto.LeadWaDto
 import com.lapakhunian.app.core.util.RoleHolder
@@ -74,6 +75,12 @@ fun ChatListScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+
+    // Tab Chat terlihat → polling badge 5 dtk; tab ditutup → VM tetap hidup untuk badge (30 dtk)
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        viewModel.setScreenVisible(true)
+        onDispose { viewModel.setScreenVisible(false) }
+    }
 
     Column(Modifier.fillMaxSize()) {
         Text(
@@ -375,13 +382,17 @@ fun ThreadScreen(
             }
         }
 
-        // Messages — selalu di-scroll ke bawah saat pesan baru masuk
+        // Messages — selalu di-scroll ke bawah saat pesan baru masuk;
+        // alignment.Bottom menempelkan konten ke kotak ketik walau pesannya sedikit
         val listState = androidx.compose.foundation.lazy.rememberLazyListState()
         androidx.compose.runtime.LaunchedEffect(state.messages.size) {
             if (state.messages.isNotEmpty()) {
-                listState.animateScrollToItem(state.messages.size - 1)
+                listState.animateScrollToItem(maxOf(state.messages.size - 1, 0))
             }
         }
+        // Bottom-align hanya saat ada isi — skeleton/error/kartu terkunci tetap di atas
+        val listAlignment: Alignment.Vertical =
+            if (state.messages.isEmpty() && state.failedMessages.isEmpty()) Alignment.Top else Alignment.Bottom
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -389,7 +400,7 @@ fun ThreadScreen(
                 .weight(1f),
             reverseLayout = false,
             contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp, listAlignment),
         ) {
             if (state.loading && state.messages.isEmpty()) {
                 item { ThreadSkeleton() }
@@ -398,11 +409,18 @@ fun ThreadScreen(
                 item { Text(message, color = ErrorRed, style = MaterialTheme.typography.labelMedium) }
             }
             itemsIndexed(state.messages, key = { idx, msg -> msg.id ?: "msg-$idx" }) { _, message ->
-                MessageBubble(message)
+                MessageBubble(
+                    message,
+                    status = when {
+                        message.id?.startsWith("temp-") == true -> MessageTick.Sending
+                        message.read == true -> MessageTick.Read
+                        else -> MessageTick.Sent
+                    },
+                )
             }
             itemsIndexed(state.failedMessages, key = { idx, msg -> "failed-${msg.id ?: idx}" }) { _, message ->
                 Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth()) {
-                    MessageBubble(message)
+                    MessageBubble(message, status = MessageTick.Failed)
                     Text("Gagal dikirim", color = ErrorRed, style = MaterialTheme.typography.labelMedium)
                     TextButton(
                         enabled = !state.sending && !state.locked,
@@ -539,8 +557,14 @@ fun ThreadScreen(
     }
 }
 
+/** Status pesanku ala WhatsApp: jam = belum terkirim, ceklis = terkirim, ceklis 2 = dibaca. */
+enum class MessageTick { Sending, Failed, Sent, Read }
+
 @Composable
-private fun MessageBubble(message: com.lapakhunian.app.core.network.dto.MessageDto) {
+private fun MessageBubble(
+    message: com.lapakhunian.app.core.network.dto.MessageDto,
+    status: MessageTick? = null,
+) {
     val fromMe = message.fromMe == true
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -556,18 +580,45 @@ private fun MessageBubble(message: com.lapakhunian.app.core.network.dto.MessageD
                 )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
-            Text(
-                message.content.orEmpty(),
-                color = if (fromMe) Color.White else MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    message.content.orEmpty(),
+                    color = if (fromMe) Color.White else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        formatChatTime(message.createdAt),
+                        fontSize = 10.sp,
+                        color = if (fromMe) Color.White.copy(alpha = 0.75f) else MutedGray,
+                        fontWeight = FontWeight.W600,
+                    )
+                    if (fromMe && status != null) {
+                        PhIcon(
+                            when (status) {
+                                MessageTick.Sending, MessageTick.Failed -> AppIcons.Clock
+                                MessageTick.Sent -> AppIcons.Check
+                                MessageTick.Read -> AppIcons.DoneAll
+                            },
+                            contentDescription = when (status) {
+                                MessageTick.Sending -> "Sedang mengirim"
+                                MessageTick.Failed -> "Gagal terkirim"
+                                MessageTick.Sent -> "Terkirim"
+                                MessageTick.Read -> "Dibaca"
+                            },
+                            tint = when (status) {
+                                MessageTick.Failed -> ErrorRed
+                                // biru muda ala read receipt WhatsApp agar beda dari "terkirim"
+                                MessageTick.Read -> Color(0xFF8FD8FF)
+                                else -> Color.White.copy(alpha = 0.75f)
+                            },
+                            weight = PhosphorWeight.REGULAR,
+                            size = 12.dp,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
+                }
+            }
         }
-        Text(
-            formatChatTime(message.createdAt),
-            fontSize = 10.sp,
-            color = MutedGray,
-            fontWeight = FontWeight.W600,
-            modifier = Modifier.padding(top = 3.dp),
-        )
     }
 }

@@ -35,6 +35,7 @@ object AppIcons {
     const val Edit = "pencil-simple"
     const val Logout = "sign-out"
     const val DoneAll = "checks"
+    const val Check = "check"
     const val Dashboard = "squares-four"
     const val Lock = "lock"
     const val LockOpen = "lock-open"

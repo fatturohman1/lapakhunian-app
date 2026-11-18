@@ -2,6 +2,8 @@ package com.lapakhunian.app.core.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -46,6 +48,7 @@ import com.lapakhunian.app.feature.dashboard.LeadWaScreen
 import com.lapakhunian.app.feature.dashboard.ListingWizardScreen
 import com.lapakhunian.app.feature.dashboard.OwnerDashboardScreen
 import com.lapakhunian.app.feature.chat.ChatListScreen
+import com.lapakhunian.app.feature.chat.ChatListViewModel
 import com.lapakhunian.app.feature.chat.ContactScreen
 import com.lapakhunian.app.feature.chat.ThreadScreen
 import com.lapakhunian.app.feature.detail.DetailScreen
@@ -120,6 +123,10 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    // Satu ChatListViewModel untuk badge tab Chat + layar Chat (hindari dobel polling);
+    // polling sendiri sudah gated foreground via ProcessLifecycleOwner.
+    val chatListViewModel: ChatListViewModel = hiltViewModel()
+    val chatListState by chatListViewModel.state.collectAsState()
     val isWizard = currentDestination?.route?.substringBefore('?') == "listing-wizard"
     var pendingExit by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<(() -> Unit)?>(null) }
     val navigateSafely: (() -> Unit) -> Unit = { action ->
@@ -179,11 +186,25 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                                 }
                             },
                             icon = {
-                                PhIcon(
-                                    name = dest.icon,
-                                    size = 24.dp,
-                                    weight = if (selected) PhosphorWeight.FILL else PhosphorWeight.DUOTONE,
-                                )
+                                val unreadCount = if (dest.route == Routes.CHAT) chatListState.totalUnread else 0
+                                val iconContent: @Composable () -> Unit = {
+                                    PhIcon(
+                                        name = dest.icon,
+                                        size = 24.dp,
+                                        weight = if (selected) PhosphorWeight.FILL else PhosphorWeight.DUOTONE,
+                                    )
+                                }
+                                if (unreadCount > 0) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge(containerColor = MaterialTheme.colorScheme.error) {
+                                                Text(if (unreadCount > 99) "99+" else unreadCount.toString())
+                                            }
+                                        },
+                                    ) { iconContent() }
+                                } else {
+                                    iconContent()
+                                }
                             },
                             label = { Text(stringResource(dest.labelRes)) },
                             colors = NavigationBarItemDefaults.colors(
@@ -365,6 +386,7 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                     onOpenThread = { navController.navigate("thread/$it") },
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
                     onOpenLeadWa = { navController.navigate("lead-wa") },
+                    viewModel = chatListViewModel,
                 )
             }
             composable(Routes.PROFILE) {

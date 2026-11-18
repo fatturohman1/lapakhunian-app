@@ -176,6 +176,9 @@ data class MessageDto(
     val createdAt: String? = null,
     val fromMe: Boolean? = null,
     val locked: Boolean? = null,
+    // Read receipt (server → field read): untuk pesan fromMe, true = lawan chat sudah membaca.
+    // Null = server lama → tampil ceklis 1 (terkirim).
+    val read: Boolean? = null,
     val sender: MessageSenderDto? = null,
 )
 

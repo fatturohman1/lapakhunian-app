@@ -24,9 +24,11 @@ private inline fun <T> envelope(block: () -> com.lapakhunian.app.core.network.dt
 class ChatRepository @Inject constructor(
     private val api: PropertyApi,
 ) {
-    fun conversations(): Flow<Result<List<ConversationDto>>> = polled {
-        envelope { api.conversations() }.getOrThrow()
-    }
+    /** Interval default 5 dtk; badge-only (tab Chat tak terlihat) memakai interval lebih lambat. */
+    fun conversations(intervalMillis: Long = 5_000L): Flow<Result<List<ConversationDto>>> =
+        polled(intervalMillis) {
+            envelope { api.conversations() }.getOrThrow()
+        }
 
     /** Snapshot percakapan sekali baca — dipakai worker notifikasi background. */
     suspend fun conversationsOnce(): List<ConversationDto> =
@@ -74,7 +76,10 @@ class ChatRepository @Inject constructor(
 }
 
 /** Flow polling: tiap tick menghasilkan Result; error jaringan tidak mematikan loop maupun collector. */
-private fun <T> polled(block: suspend () -> T): Flow<Result<T>> =
+private fun <T> polled(
+    intervalMillis: Long = 5_000L,
+    block: suspend () -> T,
+): Flow<Result<T>> =
     kotlinx.coroutines.flow.flow {
         while (true) {
             try {
@@ -84,6 +89,6 @@ private fun <T> polled(block: suspend () -> T): Flow<Result<T>> =
             } catch (e: Exception) {
                 emit(Result.failure(e))
             }
-            kotlinx.coroutines.delay(5000)
+            kotlinx.coroutines.delay(intervalMillis)
         }
     }
