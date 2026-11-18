@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -24,7 +25,13 @@ class MainActivity : ComponentActivity() {
     ) { /* ditolak → chat tetap bisa dibaca manual, tidak nag ulang */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splash = installSplashScreen()
+        // Cold start: tahan splash ~700ms supaya animasi loader (1 putaran 900ms)
+        // sempat terlihat. Warm start (savedInstanceState != null) tidak ditahan.
+        if (savedInstanceState == null) {
+            val start = SystemClock.uptimeMillis()
+            splash.setKeepOnScreenCondition { SystemClock.uptimeMillis() - start < 700 }
+        }
         super.onCreate(savedInstanceState)
         askNotificationPermission()
         // Beta: paksa status bar & navigasi sistem gaya light (ikon gelap)
