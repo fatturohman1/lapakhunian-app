@@ -120,7 +120,12 @@ private fun LaunchedEffectOnce(key: Any? = Unit, block: suspend () -> Unit) {
 }
 
 @Composable
-fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = null) {
+fun AppRoot(
+    initialOpenChat: Boolean = false,
+    initialPropertySlug: String? = null,
+    showBrandSplash: Boolean = false,
+    onUiReady: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -128,6 +133,10 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
     // polling sendiri sudah gated foreground via ProcessLifecycleOwner.
     val chatListViewModel: ChatListViewModel = hiltViewModel()
     val chatListState by chatListViewModel.state.collectAsState()
+
+    // UI siap tergambar → system splash boleh lepas (transisi mulus ke brand splash)
+    androidx.compose.runtime.SideEffect { onUiReady() }
+
     val isWizard = currentDestination?.route?.substringBefore('?') == "listing-wizard"
     var pendingExit by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<(() -> Unit)?>(null) }
     val navigateSafely: (() -> Unit) -> Unit = { action ->
@@ -578,6 +587,27 @@ fun AppRoot(initialOpenChat: Boolean = false, initialPropertySlug: String? = nul
                     },
                 )
             }
+        }
+    }
+
+    // Brand splash (mockup PNG: logo + wordmark + bar loading + tagline) — cold start saja.
+    // Di-compose SETELAH Scaffold supaya digambar paling atas.
+    if (showBrandSplash) {
+        var brandVisible by androidx.compose.runtime.saveable.rememberSaveable {
+            androidx.compose.runtime.mutableStateOf(true)
+        }
+        LaunchedEffect(Unit) {
+            kotlinx.coroutines.delay(1200)
+            brandVisible = false
+        }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = brandVisible,
+            enter = androidx.compose.animation.EnterTransition.None,
+            exit = androidx.compose.animation.fadeOut(
+                androidx.compose.animation.core.tween(250),
+            ),
+        ) {
+            BrandSplashScreen()
         }
     }
 }

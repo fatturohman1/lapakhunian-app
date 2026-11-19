@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -24,14 +23,14 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission(),
     ) { /* ditolak → chat tetap bisa dibaca manual, tidak nag ulang */ }
 
+    /** UI pertama sudah ter-compose → system splash boleh lepas ke brand splash. */
+    private var appUiReady = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
-        // Cold start: tahan splash ~700ms supaya animasi loader (1 putaran 900ms)
-        // sempat terlihat. Warm start (savedInstanceState != null) tidak ditahan.
-        if (savedInstanceState == null) {
-            val start = SystemClock.uptimeMillis()
-            splash.setKeepOnScreenCondition { SystemClock.uptimeMillis() - start < 700 }
-        }
+        // Tahan system splash sampai layar pertama (brand splash) ter-compose —
+        // transisi logo system → brand splash mulus tanpa kedip layar kosong.
+        splash.setKeepOnScreenCondition { !appUiReady }
         super.onCreate(savedInstanceState)
         askNotificationPermission()
         // Beta: paksa status bar & navigasi sistem gaya light (ikon gelap)
@@ -48,7 +47,12 @@ class MainActivity : ComponentActivity() {
         }?.lastPathSegment
         setContent {
             LapakHunianTheme {
-                AppRoot(initialOpenChat = openChat, initialPropertySlug = propertySlug)
+                AppRoot(
+                    initialOpenChat = openChat,
+                    initialPropertySlug = propertySlug,
+                    showBrandSplash = savedInstanceState == null,
+                    onUiReady = { appUiReady = true },
+                )
             }
         }
     }

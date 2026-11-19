@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo mark LapakHunian (dari lapakhunian-mark.svg) — konten y 84..914
+     di-translate agar viewport pas 1000x830. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="140dp"
+    android:height="117dp"
+    android:viewportWidth="1000"
+    android:viewportHeight="830">
+    <group
+        android:translateY="-84">
+        <path
+            android:fillColor="#14A94F"
+            android:fillType="evenOdd"
+            android:pathData="M0 379L362 84L705 382V914H0V379ZM60 410V850H645V412L362 164L60 410Z" />
+        <path
+            android:fillColor="#14A94F"
+            android:pathData="M535 168L637 84L1000 382V914H803V851L940 850V413L638 166L580 214L535 174V168Z" />
+        <path
+            android:fillColor="#14A94F"
+            android:pathData="M279 383L407 277L453 316L339 411V717H543V778H279V383Z" />
+    </group>
+</vector>
