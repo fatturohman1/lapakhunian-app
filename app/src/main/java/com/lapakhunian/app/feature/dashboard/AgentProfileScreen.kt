@@ -1,6 +1,9 @@
 package com.lapakhunian.app.feature.dashboard
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,7 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -119,6 +125,7 @@ fun AgentProfileScreen(
     viewModel: AgentProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
 
     // Muat/refresh tiap layar kembali tampil — setelah edit tersimpan profil langsung segar
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
@@ -190,38 +197,45 @@ fun AgentProfileScreen(
                     )
                 }
 
-                // Avatar + nama + URL profil publik + badge tier
+                // Identitas: avatar ring putih overlap banner + nama + pill link profil publik
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
-                        .offset(y = (-24).dp),
+                        .offset(y = (-28).dp),
                     verticalAlignment = Alignment.Bottom,
                 ) {
-                    Box(Modifier.offset(y = 12.dp)) {
-                        if (!agent?.image.isNullOrBlank()) {
-                            AsyncImage(
-                                model = ApiConfig.absoluteUrl(agent?.image),
-                                contentDescription = "Avatar agen",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(Color.White),
-                            )
-                        } else {
-                            InitialAvatar(initials = (agent?.name ?: "A").take(2), size = 64)
+                    Box(Modifier.offset(y = 14.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(88.dp)
+                                .border(4.dp, MaterialTheme.colorScheme.background, CircleShape)
+                                .clip(CircleShape)
+                                .background(TintGreen),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (!agent?.image.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = ApiConfig.absoluteUrl(agent?.image),
+                                    contentDescription = "Avatar agen",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else {
+                                InitialAvatar(initials = (agent?.name ?: "A").take(2), size = 80)
+                            }
                         }
                     }
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = 12.dp),
+                            .padding(start = 14.dp)
+                            .padding(bottom = 6.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 agent?.name ?: "Agen",
-                                fontSize = 19.sp,
+                                fontSize = 21.sp,
                                 fontWeight = FontWeight.W800,
                                 modifier = Modifier.weight(1f, fill = false),
                                 maxLines = 1,
@@ -240,14 +254,34 @@ fun AgentProfileScreen(
                                 )
                             }
                         }
-                        agent?.slug?.takeIf { it.isNotBlank() }?.let {
-                            Text(
-                                "lapakhunian.com/agen/$it",
-                                fontSize = 11.5.sp,
-                                color = MutedGray,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                        agent?.slug?.takeIf { it.isNotBlank() }?.let { slug ->
+                            // Pill link profil publik — ketuk buka di browser
+                            Row(
+                                modifier = Modifier
+                                    .padding(top = 7.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(TintGreen)
+                                    .clickable {
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent(Intent.ACTION_VIEW, Uri.parse("https://lapakhunian.com/agen/$slug")),
+                                            )
+                                        }
+                                    }
+                                    .padding(horizontal = 11.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                PhIcon(AppIcons.Globe, tint = PrimaryDark, size = 12.dp)
+                                Text(
+                                    "lapakhunian.com/agen/$slug",
+                                    fontSize = 11.sp,
+                                    color = PrimaryDark,
+                                    fontWeight = FontWeight.W700,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(start = 5.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -255,24 +289,56 @@ fun AgentProfileScreen(
 
                 Column(
                     modifier = Modifier.padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    // Stat: rating/ulasan · listing aktif · saldo lead (resp.rate tidak tersedia di API)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatBox("${agent?.rating ?: 0.0}★", "${agent?.reviewCount ?: 0} ulasan", Modifier.weight(1f))
-                        StatBox("${agent?.propertiesCount ?: 0}", "Listing Aktif", Modifier.weight(1f))
-                        StatBox("${agent?.leadBalance ?: 0}", "Saldo Lead", Modifier.weight(1f))
+                    // Statistik: satu card segmented (rating · listing aktif · saldo lead)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AgentStat(
+                            icon = AppIcons.Star,
+                            value = "${agent?.rating ?: 0.0}",
+                            label = "${agent?.reviewCount ?: 0} ulasan",
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatDivider()
+                        AgentStat(
+                            icon = AppIcons.Buildings,
+                            value = "${agent?.propertiesCount ?: 0}",
+                            label = "Listing Aktif",
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatDivider()
+                        AgentStat(
+                            icon = AppIcons.Wallet,
+                            value = "${agent?.leadBalance ?: 0}",
+                            label = "Saldo Lead",
+                            modifier = Modifier.weight(1f),
+                        )
                     }
 
-                    agent?.bio?.takeIf { it.isNotBlank() }?.let { bio ->
-                        SectionCard("Tentang") {
-                            Text(bio, style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp))
-                        }
+                    SectionCard("Tentang") {
+                        val bio = agent?.bio.orEmpty()
+                        Text(
+                            bio.ifBlank { "Belum ada deskripsi — ketuk ikon pensil untuk menulis perkenalan kamu." },
+                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                            color = if (bio.isBlank()) MutedGray else MaterialTheme.colorScheme.onSurface,
+                        )
                     }
 
-                    // Kredensial: AREBI + kantor (yang tersedia saja)
-                    if (!agent?.licenseNumber.isNullOrBlank() || !agent?.company.isNullOrBlank()) {
-                        SectionCard("Kredensial") {
+                    SectionCard("Kredensial") {
+                        if (agent?.licenseNumber.isNullOrBlank() && agent?.company.isNullOrBlank()) {
+                            Text(
+                                "Tambahkan lisensi AREBI & kantor melalui Edit Profil.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MutedGray,
+                            )
+                        } else {
                             Column {
                                 agent?.licenseNumber?.takeIf { it.isNotBlank() }?.let { license ->
                                     CredentialRow(AppIcons.Verified, "AREBI No. $license", "VALID")
@@ -350,6 +416,40 @@ private fun AgentProfileTopBar(onBack: () -> Unit, titleColor: Color, onEdit: ((
             }
         }
     }
+}
+
+/** Kolom statistik dalam card segmented: ikon + nilai besar + label kecil. */
+@Composable
+private fun AgentStat(icon: String, value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PhIcon(icon, tint = PrimaryDark, size = 13.dp)
+            Text(
+                value,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.W800,
+                color = PrimaryDark,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        }
+        Text(
+            label,
+            fontSize = 11.sp,
+            color = MutedGray,
+            fontWeight = FontWeight.W600,
+            modifier = Modifier.padding(top = 3.dp),
+        )
+    }
+}
+
+@Composable
+private fun StatDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(30.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    )
 }
 
 @Composable
