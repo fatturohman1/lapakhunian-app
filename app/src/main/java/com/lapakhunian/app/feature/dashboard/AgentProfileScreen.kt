@@ -197,95 +197,98 @@ fun AgentProfileScreen(
                     )
                 }
 
-                // Identitas: avatar ring putih overlap banner + nama + pill link profil publik
+                // Identitas: avatar ring overlap banner; nama & pill link di bawah avatar
+                // (tanpa overlap teks di area banner — nama tidak mungkin terpotong)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
-                        .offset(y = (-28).dp),
-                    verticalAlignment = Alignment.Bottom,
+                        .offset(y = (-36).dp),
                 ) {
-                    Box(Modifier.offset(y = 14.dp)) {
-                        Box(
-                            modifier = Modifier
-                                .size(88.dp)
-                                .border(4.dp, MaterialTheme.colorScheme.background, CircleShape)
-                                .clip(CircleShape)
-                                .background(TintGreen),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (!agent?.image.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = ApiConfig.absoluteUrl(agent?.image),
-                                    contentDescription = "Avatar agen",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            } else {
-                                InitialAvatar(initials = (agent?.name ?: "A").take(2), size = 80)
-                            }
-                        }
-                    }
-                    Column(
+                    Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 14.dp)
-                            .padding(bottom = 6.dp),
+                            .size(92.dp)
+                            .border(4.dp, MaterialTheme.colorScheme.background, CircleShape)
+                            .clip(CircleShape)
+                            .background(TintGreen),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                agent?.name ?: "Agen",
-                                fontSize = 21.sp,
-                                fontWeight = FontWeight.W800,
-                                modifier = Modifier.weight(1f, fill = false),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                        if (!agent?.image.isNullOrBlank()) {
+                            AsyncImage(
+                                model = ApiConfig.absoluteUrl(agent?.image),
+                                contentDescription = "Avatar agen",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
                             )
-                            if (agent?.profileTier == "PREMIUM") {
-                                Text(
-                                    "PRO",
-                                    color = Color.White,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.W800,
-                                    modifier = Modifier
-                                        .padding(start = 8.dp)
-                                        .background(Color(0xFF7C3AED), RoundedCornerShape(50))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp),
-                                )
-                            }
-                        }
-                        agent?.slug?.takeIf { it.isNotBlank() }?.let { slug ->
-                            // Pill link profil publik — ketuk buka di browser
-                            Row(
-                                modifier = Modifier
-                                    .padding(top = 7.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(TintGreen)
-                                    .clickable {
-                                        runCatching {
-                                            context.startActivity(
-                                                Intent(Intent.ACTION_VIEW, Uri.parse("https://lapakhunian.com/agen/$slug")),
-                                            )
-                                        }
-                                    }
-                                    .padding(horizontal = 11.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                PhIcon(AppIcons.Globe, tint = PrimaryDark, size = 12.dp)
-                                Text(
-                                    "lapakhunian.com/agen/$slug",
-                                    fontSize = 11.sp,
-                                    color = PrimaryDark,
-                                    fontWeight = FontWeight.W700,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(start = 5.dp),
-                                )
-                            }
+                        } else {
+                            InitialAvatar(initials = (agent?.name ?: "A").take(2), size = 84)
                         }
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .offset(y = (-22).dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            agent?.name ?: "Agen",
+                            // lineHeight eksplisit > fontSize — lineHeight bawaan style
+                            // (20sp) lebih kecil dari glyph 21sp → huruf atas terpotong
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontSize = 21.sp,
+                                lineHeight = 27.sp,
+                            ),
+                            fontWeight = FontWeight.W800,
+                            modifier = Modifier.weight(1f, fill = false),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (agent?.profileTier == "PREMIUM") {
+                            Text(
+                                "PRO",
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.W800,
+                                modifier = Modifier
+                                    .padding(start = 8.dp)
+                                    .background(Color(0xFF7C3AED), RoundedCornerShape(50))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                            )
+                        }
+                    }
+                    agent?.slug?.takeIf { it.isNotBlank() }?.let { slug ->
+                        // Pill link profil publik — ketuk buka di browser
+                        Row(
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(TintGreen)
+                                .clickable {
+                                    runCatching {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, Uri.parse("https://lapakhunian.com/agen/$slug")),
+                                        )
+                                    }
+                                }
+                                .padding(horizontal = 11.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            PhIcon(AppIcons.Globe, tint = PrimaryDark, size = 12.dp)
+                            Text(
+                                "lapakhunian.com/agen/$slug",
+                                fontSize = 11.sp,
+                                color = PrimaryDark,
+                                fontWeight = FontWeight.W700,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 5.dp),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(22.dp))
 
                 Column(
                     modifier = Modifier.padding(horizontal = 20.dp),
