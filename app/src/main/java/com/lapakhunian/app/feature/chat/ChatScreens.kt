@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -343,7 +346,13 @@ fun ThreadScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            // Seluruh layar naik bersama keyboard (pola resmi Compose): header tetap
+            // terlihat, pesan selalu menempel di atas kotak ketik. Navbar sudah
+            // "dikonsumsi" parent (padding Scaffold) — konsumsi manual agar imePadding
+            // tepat di atas keyboard tanpa dobel gap (bug di sebagian perangkat).
+            .consumeWindowInsets(WindowInsets.navigationBars)
+            .imePadding(),
     ) {
         // Header
         Row(
@@ -382,15 +391,10 @@ fun ThreadScreen(
             }
         }
 
-        // Messages — reverseLayout: index 0 = paling bawah (tepat di atas kotak ketik).
-        // Saat keyboard membuka, viewport menyusut dan pesan tetap menempel di bawah
-        // tanpa scroll manual (root cause konten "terdorong ke atas" sebelumnya).
+        // Messages — reverseLayout (index 0 = pesan terbaru) + alignment Bottom:
+        // konten selalu menempel di atas kotak ketik — keyboard membuka/menutup
+        // tidak pernah menggeser pesan ke atas.
         val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-        androidx.compose.runtime.LaunchedEffect(state.messages.size) {
-            if (state.messages.isNotEmpty()) {
-                listState.animateScrollToItem(0)
-            }
-        }
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -398,7 +402,7 @@ fun ThreadScreen(
                 .weight(1f),
             reverseLayout = true,
             contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp, Alignment.Bottom),
         ) {
             // Urutan DSL = dari bawah ke atas layar (karena reverseLayout)
             if (state.locked) {
@@ -455,12 +459,11 @@ fun ThreadScreen(
             }
         }
 
-        // Input (disable saat locked)
+        // Input (disable saat locked) — imePadding sudah di root column
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .imePadding()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

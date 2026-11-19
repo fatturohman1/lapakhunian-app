@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
@@ -99,20 +100,22 @@ class ChatReceiptTickTest {
         compose.onNode(hasSetTextAction()).performTextInput("Pesan A")
         compose.onNodeWithContentDescription("Kirim").performClick()
         compose.waitUntil(5_000) { vm.state.value.sending }
-        compose.onNodeWithContentDescription("Sedang mengirim").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Sedang mengirim")
+            .performScrollTo()
+            .assertIsDisplayed()
 
         // Ceklis 1: server menerima pesan — pastikan sent-a sudah masuk list (transisi jam→ceklis)
         releaseSend.complete(Unit)
         compose.waitUntil(5_000) {
             !vm.state.value.sending && vm.state.value.messages.any { it.id == "sent-a" }
         }
-        compose.onAllNodesWithContentDescription("Terkirim")[0].assertIsDisplayed()
+        compose.onAllNodesWithContentDescription("Terkirim")[0].performScrollTo().assertIsDisplayed()
 
         // Ceklis 2: polling berikutnya melaporkan pesan sudah dibaca
         sentRead.set(true)
         compose.waitUntil(20_000) {
             vm.state.value.messages.firstOrNull { it.id == "sent-a" }?.read == true
         }
-        compose.onAllNodesWithContentDescription("Dibaca")[0].assertIsDisplayed()
+        compose.onAllNodesWithContentDescription("Dibaca")[0].performScrollTo().assertIsDisplayed()
     }
 }
