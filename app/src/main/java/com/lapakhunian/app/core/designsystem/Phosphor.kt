@@ -24,12 +24,12 @@ import com.lapakhunian.app.R
 
 /**
  * Metrik font Phosphor (dihitung dari TTF res/font): ascent 0.938em, descent 0.062em,
- * glyph ikon digambar 0..1em di atas baseline. Formula baseline Compose meng-center
- * metrik font — line box 1.124em memuat glyph utuh, namun center visual glyph tetap
- * 0.062em di atas line center → dikompensasi offset ke bawah supaya presisi tengah.
+ * glyph ikon digambar 0..1em di atas baseline. Line box = fontSize memotong 0.062em
+ * bagian atas glyph (ascent < em) — root cause icon "terpotong".
+ * Line box 1.124em (fontSize * 1.124) memuat glyph utuh DAN center-nya pas
+ * tengah (diverifikasi ukur pixel: offset glyph vs center container ≈ 0).
  */
 private const val PHOSPHOR_LINE_HEIGHT_EM = 1.124f
-private const val PHOSPHOR_CENTER_COMPENSATION_EM = 0.062f
 
 /** Family font Phosphor (bundled di res/font). */
 object PhosphorFont {
@@ -70,9 +70,7 @@ fun PhIcon(
     ) {
         Text(
             text = codepoint,
-            modifier = Modifier
-                .clearAndSetSemantics { }
-                .offset(y = with(LocalDensity.current) { (spSize * PHOSPHOR_CENTER_COMPENSATION_EM).toDp() }),
+            modifier = Modifier.clearAndSetSemantics { },
             fontFamily = if (filled) PhosphorFont.Fill else PhosphorFont.Regular,
             fontSize = spSize,
             fontStyle = FontStyle.Normal,
