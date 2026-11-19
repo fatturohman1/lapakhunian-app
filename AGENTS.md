@@ -26,6 +26,13 @@ git tag v<versi> && git push origin v<versi>
   `gh run list --limit 3` / `gh run watch <id>`. Kalau gagal: perbaiki, hapus tag remote
   (`git push origin :refs/tags/v<versi>`), tag ulang dari commit yang benar, push.
 
+### Aturan push (WAJIB — hindari bentrok di GitHub)
+- Commit banyak & push **jadi satu boleh** — satu `git push` berisi beberapa commit tidak masalah.
+- **Beberapa push yang harus masuk JANGAN barengan**: satu push → tunggu selesai
+  (remote ter-update) → baru push berikutnya. Contoh: repo app + repo server (hously)
+  keduanya punya perubahan → push server dulu, selesai, baru push app.
+- Sama untuk tag rilis: `git push origin main` selesai dulu, baru `git push origin v<versi>`.
+
 ### Rilis manual lokal (jarang, mis. untuk uji cepat)
 ```
 ./gradlew assembleRelease
