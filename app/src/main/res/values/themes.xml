@@ -7,7 +7,7 @@
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <!-- Splash API <31: icon statis (compat splash tidak memulai AVD, loader akan beku) -->
+    <!-- Splash ala guideline Android 12+: launcher icon statis di lingkaran tengah -->
     <style name="Theme.LapakHunian.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@android:color/white</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>

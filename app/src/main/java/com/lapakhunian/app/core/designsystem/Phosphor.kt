@@ -2,6 +2,7 @@ package com.lapakhunian.app.core.designsystem
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -20,6 +21,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lapakhunian.app.R
+
+/**
+ * Metrik font Phosphor (dihitung dari TTF res/font): ascent 0.938em, descent 0.062em,
+ * glyph ikon digambar 0..1em di atas baseline. Formula baseline Compose meng-center
+ * metrik font — line box 1.124em memuat glyph utuh, namun center visual glyph tetap
+ * 0.062em di atas line center → dikompensasi offset ke bawah supaya presisi tengah.
+ */
+private const val PHOSPHOR_LINE_HEIGHT_EM = 1.124f
+private const val PHOSPHOR_CENTER_COMPENSATION_EM = 0.062f
 
 /** Family font Phosphor (bundled di res/font). */
 object PhosphorFont {
@@ -60,14 +70,14 @@ fun PhIcon(
     ) {
         Text(
             text = codepoint,
-            modifier = Modifier.clearAndSetSemantics { },
+            modifier = Modifier
+                .clearAndSetSemantics { }
+                .offset(y = with(LocalDensity.current) { (spSize * PHOSPHOR_CENTER_COMPENSATION_EM).toDp() }),
             fontFamily = if (filled) PhosphorFont.Fill else PhosphorFont.Regular,
             fontSize = spSize,
-            // lineHeight > fontSize: glyph Phosphor punya extent > 1em — line box 1em
-            // memotong bagian atas/bawah glyph (keluhan "icon terpotong")
-            lineHeight = spSize * 1.35f,
             fontStyle = FontStyle.Normal,
             color = tint,
+            lineHeight = spSize * PHOSPHOR_LINE_HEIGHT_EM,
         )
     }
 }

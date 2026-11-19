@@ -382,52 +382,25 @@ fun ThreadScreen(
             }
         }
 
-        // Messages — selalu di-scroll ke bawah saat pesan baru masuk;
-        // alignment.Bottom menempelkan konten ke kotak ketik walau pesannya sedikit
+        // Messages — reverseLayout: index 0 = paling bawah (tepat di atas kotak ketik).
+        // Saat keyboard membuka, viewport menyusut dan pesan tetap menempel di bawah
+        // tanpa scroll manual (root cause konten "terdorong ke atas" sebelumnya).
         val listState = androidx.compose.foundation.lazy.rememberLazyListState()
         androidx.compose.runtime.LaunchedEffect(state.messages.size) {
             if (state.messages.isNotEmpty()) {
-                listState.animateScrollToItem(maxOf(state.messages.size - 1, 0))
+                listState.animateScrollToItem(0)
             }
         }
-        // Bottom-align hanya saat ada isi — skeleton/error/kartu terkunci tetap di atas
-        val listAlignment: Alignment.Vertical =
-            if (state.messages.isEmpty() && state.failedMessages.isEmpty()) Alignment.Top else Alignment.Bottom
         LazyColumn(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .weight(1f),
-            reverseLayout = false,
+            reverseLayout = true,
             contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp, listAlignment),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
-            if (state.loading && state.messages.isEmpty()) {
-                item { ThreadSkeleton() }
-            }
-            state.error?.let { message ->
-                item { Text(message, color = ErrorRed, style = MaterialTheme.typography.labelMedium) }
-            }
-            itemsIndexed(state.messages, key = { idx, msg -> msg.id ?: "msg-$idx" }) { _, message ->
-                MessageBubble(
-                    message,
-                    status = when {
-                        message.id?.startsWith("temp-") == true -> MessageTick.Sending
-                        message.read == true -> MessageTick.Read
-                        else -> MessageTick.Sent
-                    },
-                )
-            }
-            itemsIndexed(state.failedMessages, key = { idx, msg -> "failed-${msg.id ?: idx}" }) { _, message ->
-                Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth()) {
-                    MessageBubble(message, status = MessageTick.Failed)
-                    Text("Gagal dikirim", color = ErrorRed, style = MaterialTheme.typography.labelMedium)
-                    TextButton(
-                        enabled = !state.sending && !state.locked,
-                        onClick = { message.id?.let(viewModel::retryFailed) },
-                    ) { Text("Coba kirim lagi") }
-                }
-            }
+            // Urutan DSL = dari bawah ke atas layar (karena reverseLayout)
             if (state.locked) {
                 item {
                     Column(
@@ -453,6 +426,32 @@ fun ThreadScreen(
                         ) { Text("Buka Chat — 1 Lead", fontWeight = FontWeight.W700) }
                     }
                 }
+            }
+            itemsIndexed(state.failedMessages.asReversed(), key = { idx, msg -> "failed-${msg.id ?: idx}" }) { _, message ->
+                Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth()) {
+                    MessageBubble(message, status = MessageTick.Failed)
+                    Text("Gagal dikirim", color = ErrorRed, style = MaterialTheme.typography.labelMedium)
+                    TextButton(
+                        enabled = !state.sending && !state.locked,
+                        onClick = { message.id?.let(viewModel::retryFailed) },
+                    ) { Text("Coba kirim lagi") }
+                }
+            }
+            itemsIndexed(state.messages.asReversed(), key = { idx, msg -> msg.id ?: "msg-$idx" }) { _, message ->
+                MessageBubble(
+                    message,
+                    status = when {
+                        message.id?.startsWith("temp-") == true -> MessageTick.Sending
+                        message.read == true -> MessageTick.Read
+                        else -> MessageTick.Sent
+                    },
+                )
+            }
+            state.error?.let { message ->
+                item { Text(message, color = ErrorRed, style = MaterialTheme.typography.labelMedium) }
+            }
+            if (state.loading && state.messages.isEmpty()) {
+                item { ThreadSkeleton() }
             }
         }
 

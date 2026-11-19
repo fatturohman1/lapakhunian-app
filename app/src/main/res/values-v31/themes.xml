@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Splash API 31+: sistem memulai AVD sendiri → logo + loader arc berputar (900ms/putaran).
-         Viewport persegi menjaga konten tetap utuh di lingkaran mask splash. -->
+    <!-- Splash API 31+: mengikuti guideline Android 12+ — launcher icon statis di
+         lingkaran tengah, tanpa animasi/loader tambahan. Sama dengan base theme. -->
     <style name="Theme.LapakHunian.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@android:color/white</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/lapakhunian_loading</item>
-        <item name="windowSplashScreenAnimationDuration">900</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.LapakHunian</item>
     </style>
 </resources>
