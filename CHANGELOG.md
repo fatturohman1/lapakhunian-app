@@ -2,6 +2,100 @@
 
 Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag Git yang tersedia; bagian **Belum dirilis** berisi perubahan lokal yang belum masuk ke APK rilis.
 
+## 1.0.0-beta.13
+
+### Diubah
+
+- Seluruh ikon aplikasi kini dirender sebagai vektor murni (`ImageVector` yang digenerate
+  dari font Phosphor untuk 62 ikon yang dipakai, Regular + Fill) — bentuk ikon identik dan
+  presisi di semua perangkat, tidak lagi terpengaruh metrik font, skala font sistem, atau
+  quirk OEM. Menutup tuntas keluhan ikon terpotong/tidak presisi yang berulang.
+- Splash sistem (Android 12+) kini putih polos tanpa logo statis — logo lama di splash
+  sistem dihapus; brand splash dalam app muncul setelahnya dengan fade-in halus.
+- Launcher icon baru: logo LapakHunian dengan stroke di adaptive icon, logo diperkecil
+  di dalam safe-zone supaya tidak mepet ke tepi mask; PNG foreground lama dihapus dan
+  ikon notifikasi (FCM + lokal) ikut memakai vektor baru.
+
+### Diperbaiki
+
+- Nama agen di halaman profil tidak lagi terpotong bagian atas (lineHeight eksplisit
+  27sp untuk teks 21sp); identitas disusun ulang — hanya avatar yang overlap banner,
+  nama dan pill link dipindah ke bawah avatar sehingga tidak ada teks di area banner.
+
+## 1.0.0-beta.12
+
+### Diperbaiki
+
+- Nama agen di halaman profil terpotong bagian atas (lineHeight bawaan style lebih kecil
+  dari teks 21sp); perbaikan ini disempurnakan lagi di beta.13 dengan penataan ulang.
+
+## 1.0.0-beta.11
+
+### Ditambahkan
+
+- **Splash brand dalam app** sesuai mockup: logo + wordmark LapakHunian.com + bar loading
+  beranimasi + tagline "Temukan hunian impianmu", tampil ±1,2 detik saat cold start
+  dengan fade-in/out halus; warm start langsung masuk tanpa splash.
+
+### Diubah
+
+- Profil agen ditata ulang: avatar 92dp dengan ring di banner, nama 21sp, pill link
+  profil publik (ketuk membuka lapakhunian.com/agen/{slug} di browser), statistik dalam
+  satu kartu segmented (rating · listing aktif · saldo lead), kartu Tentang & Kredensial
+  selalu tampil dengan placeholder saat kosong.
+- Dokumentasi aturan push di AGENTS.md (beberapa push ke remote jangan barengan).
+
+### Diperbaiki
+
+- Layout thread chat saat keyboard membuka: memakai pola IME resmi Compose
+  (root imePadding + consumeWindowInsets) dan reverseLayout dengan alignment bottom —
+  pesan selalu menempel di atas kotak ketik, header tetap terlihat, tanpa gap besar.
+- Ikon Phosphor presisi: line box dihitung dari metrik font (ascent 0.938em,
+  descent 0.062em) sehingga glyph tidak terpotong.
+
+## 1.0.0-beta.10
+
+### Diubah
+
+- Splash sistem kembali ke pola guideline Android 12+ (ikon statis di lingkaran tengah),
+  menggantikan animasi loader; splash brand baru memakai pola ini sebagai basis.
+
+### Diperbaiki
+
+- Layout thread chat saat keyboard membuka (iterasi pertama reverseLayout).
+- Ikon Phosphor terpotong (iterasi pertama line box 1.124em).
+
+## 1.0.0-beta.9
+
+### Ditambahkan
+
+- **Status pesan chat ala WhatsApp** pada bubble pesan sendiri: jam saat mengirim,
+  ceklis 1 saat terkirim, ceklis 2 biru saat dibaca (read receipt dihitung server dari
+  `lastReadAt` lawan chat; server lama tetap aman → ceklis 1); timestamp pindah masuk
+  bubble.
+- **Badge unread** pada tab Chat di bottom nav (merah dengan jumlah, maks "99+",
+  tersembunyi saat belum login; polling 5 detik saat tab terlihat, 30 detik untuk badge).
+- **Edit profil agen**: banner, avatar, Tentang, No. HP, Perusahaan, No. Lisensi AREBI
+  melalui `PATCH /api/agent/profile` (field whitelist sama dengan dashboard web).
+- Routing klik notifikasi ke tujuan native: thread chat, tab chat, halaman agen,
+  detail properti, bantuan, riwayat — link yang tidak dikenal tetap hanya ditandai
+  dibaca (`NotificationLinkMapper` + unit test).
+
+### Diubah
+
+- Unduhan pembaruan aplikasi lewat `lapakhunian.com/app/download` (proxy web dengan
+  filename benar), bukan link GitHub langsung; cek versi tetap GitHub API.
+- Peta di halaman properti dihapus (peta hanya di web); alamat properti tetap tampil.
+- Thread chat bottom-aligned; pesan selalu dekat kotak ketik.
+- Splash sistem memakai ikon statis sesuai guideline Android 12+ (menggantikan
+  animasi loader AVD di beta.9 awal).
+
+### Catatan
+
+- Server (hously): field `read` per pesan pada GET/POST `/api/chat/messages`,
+  dihitung dari `lastReadAt` lawan chat; backward compatible, tanpa migration.
+- Konfigurasi Firebase dan Google Auth tidak diubah.
+
 ## 1.0.0-beta.8
 
 ### Diperbaiki
