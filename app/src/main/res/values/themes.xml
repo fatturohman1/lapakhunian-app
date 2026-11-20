@@ -7,10 +7,11 @@
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <!-- Splash ala guideline Android 12+: launcher icon statis di lingkaran tengah -->
+    <!-- Splash: background putih polos (icon transparan) — brand splash dalam app
+         yang tampil setelahnya, logo lama di system splash dihapus -->
     <style name="Theme.LapakHunian.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@android:color/white</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_blank</item>
         <item name="postSplashScreenTheme">@style/Theme.LapakHunian</item>
     </style>
 </resources>

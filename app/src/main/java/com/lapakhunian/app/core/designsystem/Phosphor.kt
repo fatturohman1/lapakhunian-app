@@ -1,15 +1,17 @@
 package com.lapakhunian.app.core.designsystem
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -62,6 +64,27 @@ fun PhIcon(
         modifier.semantics { this.contentDescription = contentDescription }
     } else modifier
 
+    // Utama: render ImageVector (path vektor dari PhosphorVectors*) — bebas dari
+    // clipping metrik font / fontScale / quirk OEM, presisi identik di semua device.
+    val vec = if (weight == PhosphorWeight.FILL) {
+        PhosphorVectorsFill.ICONS[name] ?: PhosphorVectorsRegular.ICONS[name]
+    } else {
+        PhosphorVectorsRegular.ICONS[name]
+    }
+    if (vec != null) {
+        val effectiveTint = if (tint == Color.Unspecified) {
+            androidx.compose.material3.LocalContentColor.current
+        } else tint
+        Image(
+            imageVector = vec,
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(effectiveTint),
+            modifier = descModifier.size(size),
+        )
+        return
+    }
+
+    // Fallback: render font (icon yang belum ter-generate)
     val filled = weight == PhosphorWeight.FILL && name in PhosphorCodepoints.FILL
     val codepoint = (if (filled) PhosphorCodepoints.FILL[name] else PhosphorCodepoints.REGULAR[name]) ?: return
     Box(

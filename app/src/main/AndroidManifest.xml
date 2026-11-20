@@ -43,7 +43,7 @@
             android:value="chat_heads_up" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_launcher_foreground_logo" />
+            android:resource="@drawable/ic_launcher_foreground" />
 
         <!-- FCM push notification (pes chat/lead baru walau app ditutup) -->
         <service

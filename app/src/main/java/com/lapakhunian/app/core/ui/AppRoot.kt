@@ -602,7 +602,9 @@ fun AppRoot(
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = brandVisible,
-            enter = androidx.compose.animation.EnterTransition.None,
+            enter = androidx.compose.animation.fadeIn(
+                androidx.compose.animation.core.tween(200),
+            ),
             exit = androidx.compose.animation.fadeOut(
                 androidx.compose.animation.core.tween(250),
             ),
