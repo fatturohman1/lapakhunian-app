@@ -75,12 +75,22 @@ fun PhIcon(
         val effectiveTint = if (tint == Color.Unspecified) {
             androidx.compose.material3.LocalContentColor.current
         } else tint
-        Image(
-            imageVector = vec,
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(effectiveTint),
-            modifier = descModifier.size(size),
-        )
+        // PENTING: modifier pemanggil (mis. Modifier.size(40).background(...)) pasang di Box
+        // LUAR, Image ukuran `size` di dalamnya. Kalau digabung satu chain
+        // (size(40).background().size(21)), constraint tetap 40..40 dari size luar →
+        // size(21) ikut ter-clamp → icon menggambar penuh kotak (kelihatan besar+tebal).
+        // Box mengoper constraint LOOSE ke anak, jadi ukuran icon dihormati.
+        Box(
+            modifier = descModifier,
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                imageVector = vec,
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(effectiveTint),
+                modifier = Modifier.size(size),
+            )
+        }
         return
     }
 

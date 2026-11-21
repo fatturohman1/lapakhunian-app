@@ -2,6 +2,16 @@
 
 Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag Git yang tersedia; bagian **Belum dirilis** berisi perubahan lokal yang belum masuk ke APK rilis.
 
+## 1.0.0-beta.14
+
+### Diperbaiki
+
+- Ikon di dalam kotak tint (menu profil, pengaturan, dashboard, spesifikasi, tombol
+  lingkaran detail) menggambar penuh kotak sehingga kelihatan terlalu besar dan tebal —
+  ukuran ikon kini dihormati di dalam `Box` pembungkus (constraint loose), kotak dan
+  posisi tengah tetap. Perbaikan berlaku global untuk semua pemakaian
+  `PhIcon(size = x, modifier = Modifier.size(kotak).background(...))`.
+
 ## 1.0.0-beta.13
 
 ### Diubah

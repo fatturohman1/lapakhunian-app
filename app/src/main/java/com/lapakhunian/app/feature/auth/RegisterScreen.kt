@@ -228,6 +228,7 @@ private fun RoleCard(
     ) {
         PhIcon(AppIcons.Person,
             contentDescription = null,
+            size = 24.dp,
             tint = if (selected) PrimaryDark else MutedGray,
             modifier = Modifier.size(24.dp),
         )
