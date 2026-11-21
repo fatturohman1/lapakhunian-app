@@ -2,6 +2,27 @@
 
 Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag Git yang tersedia; bagian **Belum dirilis** berisi perubahan lokal yang belum masuk ke APK rilis.
 
+## Belum dirilis
+
+### Diubah
+
+- **Dashboard Saya didesain ulang**: header gradien hijau berisi tombol kembali,
+  judul, ringkasan statistik (Aktif · Review · Dilihat) dan tombol Pasang Iklan —
+  tombol mengambang lama yang menutupi kartu dihapus. Kartu properti dirapikan:
+  foto di-crop penuh (garis hijau atas/bawah hilang), nama kota dengan ikon pin,
+  harga ringkas di baris status, jumlah dilihat dengan ikon mata. Aksi
+  Edit/Terjual/Hapus/Perpanjang tidak berubah.
+
+### Ditambahkan
+
+- **Analytics pengunjung dari aplikasi**: membuka detail properti kini mencatat
+  kunjungan ke halaman Analytics Pengunjung web dengan sumber "Aplikasi Android"
+  dan path format web (/properti/{slug}) sehingga agregatnya menyatu dengan web.
+  Lokasi perkiraan (coarse) ikut dilaporkan HANYA bila izin lokasi sudah pernah
+  diberikan (tanpa memunculkan dialog izin baru) — tanpa izin, lokasi memakai
+  perkiraan GeoIP seperti web. Semua request kini membawa penanda versi
+  X-Client-App untuk kebutuhan statistik/debug server.
+
 ## 1.0.0-beta.14
 
 ### Diperbaiki

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -59,6 +60,7 @@ import com.lapakhunian.app.core.designsystem.components.EmptyState
 import com.lapakhunian.app.core.designsystem.components.InitialAvatar
 import com.lapakhunian.app.core.designsystem.components.StatusBadge
 import com.lapakhunian.app.core.designsystem.PhIcon
+import com.lapakhunian.app.core.designsystem.PhosphorWeight
 import com.lapakhunian.app.core.domain.model.ListingStatus
 import com.lapakhunian.app.core.domain.model.Property
 import com.lapakhunian.app.core.domain.model.PropertyCategory
@@ -108,77 +110,61 @@ fun OwnerDashboardScreen(
     val state by viewModel.state.collectAsState()
     var pendingDeleteId by remember { mutableStateOf<String?>(null) }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            DashTopBar("Dashboard Saya", onBack)
-            when {
-                state.needsLogin -> { NeedsLogin(onGoLogin) }
-                state.loading -> Column(Modifier.fillMaxSize()) {
-                    repeat(3) { com.lapakhunian.app.core.designsystem.components.PropertyCardSkeleton() }
-                }
-                state.error != null && state.items.isEmpty() -> EmptyState(
-                    title = "Gagal memuat",
-                    message = state.error.orEmpty(),
-                    actionLabel = "Coba lagi",
-                    onAction = { viewModel.retry() },
+    Column(Modifier.fillMaxSize()) {
+        when {
+            state.needsLogin -> { NeedsLogin(onGoLogin) }
+            else -> {
+                val active = state.items.count { it.status == ListingStatus.APPROVED }
+                val pending = state.items.count { it.status == ListingStatus.PENDING }
+                val views = state.items.sumOf { it.viewCount }
+                OwnerHero(
+                    active = "$active",
+                    review = "$pending",
+                    views = "$views",
+                    onBack = onBack,
+                    onOpenWizard = onOpenWizard,
                 )
-                state.items.isEmpty() -> EmptyState(
-                    title = "Belum ada iklan",
-                    message = "Pasang iklan pertamamu — gratis 30 hari.",
-                    icon = AppIcons.PlusCircle,
-                )
-                else -> {
-                    val active = state.items.count { it.status == ListingStatus.APPROVED }
-                    val pending = state.items.count { it.status == ListingStatus.PENDING }
-                    val views = state.items.sumOf { it.viewCount }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        StatBox("$active", "Aktif", Modifier.weight(1f))
-                        StatBox("$pending", "Review", Modifier.weight(1f))
-                        StatBox("$views", "Dilihat", Modifier.weight(1f))
+                when {
+                    state.loading -> Column(Modifier.fillMaxSize()) {
+                        repeat(3) { com.lapakhunian.app.core.designsystem.components.PropertyCardSkeleton() }
                     }
-                    state.error?.let {
-                        Text(it, color = ErrorRed, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(20.dp))
-                    }
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 20.dp),
-                    ) {
-                        item(key = "section-head") {
-                            com.lapakhunian.app.core.designsystem.components.SectionHeader("Properti Saya")
+                    state.error != null && state.items.isEmpty() -> EmptyState(
+                        title = "Gagal memuat",
+                        message = state.error.orEmpty(),
+                        actionLabel = "Coba lagi",
+                        onAction = { viewModel.retry() },
+                    )
+                    state.items.isEmpty() -> EmptyState(
+                        title = "Belum ada iklan",
+                        message = "Pasang iklan pertamamu — gratis 30 hari.",
+                        icon = AppIcons.PlusCircle,
+                    )
+                    else -> {
+                        state.error?.let {
+                            Text(it, color = ErrorRed, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                         }
-                        items(state.items, key = { it.id }) { property ->
-                            Box(Modifier.padding(horizontal = 20.dp)) {
-                                OwnerPropertyItem(
-                                    property = property,
-                                    onSold = { viewModel.markSold(property.id) },
-                                    onEdit = { onEditListing(property.id) },
-                                    onDelete = { pendingDeleteId = property.id },
-                                    onRenew = { onRenew(property.id) },
-                                )
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp),
+                        ) {
+                            item(key = "section-head") {
+                                com.lapakhunian.app.core.designsystem.components.SectionHeader("Properti Saya · ${state.items.size}")
+                            }
+                            items(state.items, key = { it.id }) { property ->
+                                Box(Modifier.padding(horizontal = 20.dp)) {
+                                    OwnerPropertyItem(
+                                        property = property,
+                                        onSold = { viewModel.markSold(property.id) },
+                                        onEdit = { onEditListing(property.id) },
+                                        onDelete = { pendingDeleteId = property.id },
+                                        onRenew = { onRenew(property.id) },
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 24.dp, end = 20.dp)
-                .background(GreenGradient, RoundedCornerShape(50))
-                .clickable(onClick = onOpenWizard)
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PhIcon(AppIcons.Sell, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                Text("Pasang Iklan", color = Color.White, fontWeight = FontWeight.W700, modifier = Modifier.padding(start = 8.dp))
             }
         }
     }
@@ -221,9 +207,87 @@ fun StatBox(value: String, label: String, modifier: Modifier = Modifier) {
     }
 }
 
+/** Hero gradien dashboard owner: back + judul, ringkasan statistik, CTA Pasang Iklan. */
+@Composable
+private fun OwnerHero(
+    active: String,
+    review: String,
+    views: String,
+    onBack: () -> Unit,
+    onOpenWizard: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(GreenGradient)
+            .padding(20.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.18f))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
+                PhIcon(AppIcons.Back, contentDescription = "Kembali", tint = Color.White, modifier = Modifier.size(22.dp))
+            }
+            Column(Modifier.padding(start = 12.dp)) {
+                Text("Dashboard Saya", fontSize = 20.sp, fontWeight = FontWeight.W800, color = Color.White)
+                Text("Kelola iklan propertimu", fontSize = 12.sp, fontWeight = FontWeight.W600, color = Color.White.copy(alpha = 0.75f))
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            HeroStat(active, "Aktif", Modifier.weight(1f))
+            HeroDivider()
+            HeroStat(review, "Review", Modifier.weight(1f))
+            HeroDivider()
+            HeroStat(views, "Dilihat", Modifier.weight(1f))
+        }
+        Button(
+            onClick = onOpenWizard,
+            shape = RoundedCornerShape(50),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = PrimaryDark),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 18.dp)
+                .height(48.dp),
+        ) {
+            PhIcon(AppIcons.Sell, contentDescription = null, size = 18.dp, tint = PrimaryDark, weight = PhosphorWeight.FILL)
+            Text("Pasang Iklan", fontWeight = FontWeight.W800, modifier = Modifier.padding(start = 8.dp))
+        }
+    }
+}
+
+@Composable
+private fun HeroStat(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, fontSize = 22.sp, fontWeight = FontWeight.W800, color = Color.White)
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.W600, color = Color.White.copy(alpha = 0.75f))
+    }
+}
+
+@Composable
+private fun HeroDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(30.dp)
+            .background(Color.White.copy(alpha = 0.2f)),
+    )
+}
+
 @Composable
 private fun OwnerPropertyItem(
-    property: Property,
+    property: com.lapakhunian.app.core.domain.model.Property,
     onSold: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -238,14 +302,14 @@ private fun OwnerPropertyItem(
     ) {
         Box(
             modifier = Modifier
-                .size(80.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF6EE7B7), Color(0xFF10B981)))),
-            contentAlignment = Alignment.Center,
+                .size(88.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(TintGreen),
         ) {
             AsyncImage(
                 model = property.images.firstOrNull(),
                 contentDescription = property.title,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -255,17 +319,36 @@ private fun OwnerPropertyItem(
                 .padding(start = 12.dp),
         ) {
             Text(property.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.W700, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            property.city?.let { city ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 3.dp),
+                ) {
+                    PhIcon(AppIcons.Location, contentDescription = null, size = 13.dp, tint = MutedGray)
+                    Text(city, fontSize = 12.sp, fontWeight = FontWeight.W600, color = MutedGray, modifier = Modifier.padding(start = 4.dp))
+                }
+            }
             val effectiveStatus = if (property.isSold) ListingStatus.SOLD else property.status ?: ListingStatus.APPROVED
-            StatusBadge(
-                status = effectiveStatus,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 6.dp),
-            )
-            Text(
-                "${property.viewCount} dilihat",
-                style = MaterialTheme.typography.labelSmall,
-                color = MutedGray,
-                modifier = Modifier.padding(top = 6.dp),
-            )
+            ) {
+                StatusBadge(status = effectiveStatus)
+                Spacer(Modifier.weight(1f))
+                Text(compactRupiah(property.price), fontSize = 13.sp, fontWeight = FontWeight.W800, color = PrimaryDark)
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 5.dp),
+            ) {
+                PhIcon(AppIcons.Eye, contentDescription = null, size = 13.dp, tint = MutedGray)
+                Text(
+                    "${property.viewCount} dilihat",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MutedGray,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            }
             // Aksi per status — mengikuti referensi HTML (scr-owner):
             // tayang → Edit/Terjual/Hapus; review → Edit; kedaluwarsa → Perpanjang; terjual/ditolak → tanpa aksi.
             if (effectiveStatus != ListingStatus.SOLD && effectiveStatus != ListingStatus.REJECTED) {
