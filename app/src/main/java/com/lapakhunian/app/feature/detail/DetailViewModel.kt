@@ -33,6 +33,7 @@ class DetailViewModel @Inject constructor(
     private val session: SessionManager,
     private val recentlyViewed: RecentlyViewedStore,
     private val guest: GuestFavoritesStore,
+    private val visitorTracker: com.lapakhunian.app.core.analytics.VisitorTracker,
 ) : ViewModel() {
 
     val propertyId: String = savedStateHandle.get<String>("propertyId").orEmpty()
@@ -66,6 +67,12 @@ class DetailViewModel @Inject constructor(
                     recentlyViewed.record(property.toSnapshot())
                     _state.update { it.copy(loading = false, property = property, error = null) }
                     loadFavoriteState()
+                    // Analytics pengunjung: catat kunjungan app dengan path format
+                    // web (/properti/{slug}) supaya agregat sama di /dashboard/visitors.
+                    // Lokasi coarse ikut HANYA bila izin lokasi sudah diberikan.
+                    viewModelScope.launch {
+                        visitorTracker.trackPropertyOpen(property.slug, property.id)
+                    }
                 },
                 onFailure = { e -> _state.update { it.copy(loading = false, error = e.message ?: "Gagal memuat") } },
             )

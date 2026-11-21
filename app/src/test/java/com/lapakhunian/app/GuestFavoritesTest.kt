@@ -136,6 +136,7 @@ class GuestFavoritesTest {
         coEvery { repo.detail("a") } returns Result.success(property)
         val vm = DetailViewModel(
             SavedStateHandle(mapOf("propertyId" to "a")), repo, session, recent, guest,
+            com.lapakhunian.app.visitorTrackerStub(),
         ).also { store.put("detail", it) }
         runCurrent()
         assertFalse(vm.state.value.isFavorite)

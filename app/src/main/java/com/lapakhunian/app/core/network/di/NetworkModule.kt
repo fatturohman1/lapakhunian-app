@@ -81,6 +81,9 @@ object NetworkModule {
                 url(baseUrl)
                 contentType(ContentType.Application.Json)
                 header("Origin", origin)
+                // Penanda asal klien — dipakai analytics server (source
+                // "android-app" di /api/visitors/track) dan debug sisi server.
+                header("X-Client-App", "android/${com.lapakhunian.app.BuildConfig.VERSION_NAME}")
             }
             engine {
                 config {

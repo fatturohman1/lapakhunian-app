@@ -16,13 +16,18 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 /**
- * Lokasi perkiraan one-shot untuk mengurutkan "Properti terdekat"; tidak pernah
- * dikirim ke server. Last-known fix sistem dulu; bila kosong (emulator / baru
+ * Lokasi perkiraan one-shot untuk mengurutkan "Properti terdekat" dan (opsional)
+ * analytics pengunjung. Last-known fix sistem dulu; bila kosong (emulator / baru
  * boot) minta satu fix dengan timeout supaya tidak menggantung tanpa hasil.
+ *
+ * Terdekat: lokasi hanya dipakai di perangkat, tidak dikirim ke server.
+ * Analytics (VisitorTracker): koordinat coarse dikirim ke server HANYA bila
+ * izin lokasi sudah diberikan sebelumnya (self-check di bawah, tanpa prompt).
  */
 @Singleton
-class DeviceLocator @Inject constructor(@ApplicationContext private val context: Context) {
-    suspend fun lastKnown(): Pair<Double, Double>? = withContext(Dispatchers.IO) {
+class DeviceLocator @Inject constructor(@ApplicationContext private val context: Context) :
+    com.lapakhunian.app.core.analytics.VisitorCoords {
+    override suspend fun lastKnown(): Pair<Double, Double>? = withContext(Dispatchers.IO) {
         val granted =
             context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                 context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
