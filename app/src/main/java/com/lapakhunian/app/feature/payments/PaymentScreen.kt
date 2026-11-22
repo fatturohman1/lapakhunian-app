@@ -86,15 +86,21 @@ class PaymentViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             if (initialUrl != null) {
+                // Fallback dari layar native (kartu/GoPay): listingId/purchaseId/subscriptionId
+                // menentukan alur polling; tanpa argumen, cukup buka halaman web.
+                val hasTarget = subscriptionId != null || listingId != null || purchaseId != null
                 _state.update {
                     it.copy(
                         loading = false,
                         paymentUrl = initialUrl,
-                        canCheckStatus = subscriptionId != null,
-                        error = if (subscriptionId == null) "Identitas tagihan tidak tersedia. Periksa langganan di dashboard." else null,
+                        canCheckStatus = hasTarget,
                     )
                 }
-                if (subscriptionId != null) pollSubscribe()
+                when {
+                    subscriptionId != null -> pollSubscribe()
+                    listingId != null -> pollRenew(listingId)
+                    purchaseId != null -> pollPurchase(purchaseId)
+                }
             } else if (purchaseId != null) {
                 dashRepo.payLeadPurchase(purchaseId).fold(
                     onSuccess = { sub ->
@@ -129,7 +135,7 @@ class PaymentViewModel @Inject constructor(
     fun checkNow() {
         viewModelScope.launch {
             when {
-                initialUrl != null -> checkSubscriptionStatus()
+                subscriptionId != null -> checkSubscriptionStatus()
                 purchaseId != null -> dashRepo.agentLeads().onSuccess { leads ->
                     val p = leads.purchases.firstOrNull { it.id == purchaseId }
                     if (p?.status == "completed") {
@@ -341,7 +347,7 @@ fun PaymentScreen(
             }
 
             Text(
-                "Midtrans Snap · VA / e-wallet / kartu",
+                "Pembayaran via halaman web Midtrans (kartu / GoPay)",
                 style = MaterialTheme.typography.labelSmall,
                 color = MutedGray,
                 modifier = Modifier

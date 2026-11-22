@@ -46,6 +46,8 @@ object AppIcons {
     const val Receipt = "receipt"
     const val Ticket = "ticket"
     const val Wallet = "wallet"
+    const val Copy = "copy"
+    const val QrCode = "qr-code"
     const val Globe = "globe"
     const val Buildings = "buildings"
     const val Crown = "crown"

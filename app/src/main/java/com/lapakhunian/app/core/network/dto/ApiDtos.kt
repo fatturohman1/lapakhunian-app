@@ -298,6 +298,28 @@ data class SubscribeResponseDto(
     val orderId: String? = null,
     val status: String? = null,
     val subscriptionId: String? = null,
+    /** Detail tagihan native VA/QRIS (charge Core API) — null untuk jalur Snap/web. */
+    val payment: NativePaymentDto? = null,
+)
+
+/** Tagihan native dari Midtrans Core API: VA bank transfer atau QRIS. */
+@Serializable
+data class NativePaymentDto(
+    val kind: String? = null, // "va" | "qris"
+    val bank: String? = null,
+    val vaNumber: String? = null,
+    val qrString: String? = null,
+    val qrUrl: String? = null,
+    val amount: Long? = null,
+    val expiresAt: String? = null,
+)
+
+/** Respons POST /api/agent/subscribe {checkOnly:true} — status + detail tagihan pending. */
+@Serializable
+data class PendingSubscriptionCheckDto(
+    val status: String? = null,
+    val midtransStatus: String? = null,
+    val payment: NativePaymentDto? = null,
 )
 
 /** Respons GET /api/agent/subscribe — pending dipakai untuk kartu "Pembayaran tertunda". */

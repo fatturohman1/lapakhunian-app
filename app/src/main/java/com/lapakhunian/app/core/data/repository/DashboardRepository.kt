@@ -50,9 +50,9 @@ class DashboardRepository @Inject constructor(
         Unit
     }
 
-    suspend fun renewListing(id: String): Result<SubscribeResponseDto> = runCatching {
+    suspend fun renewListing(id: String, method: String? = null): Result<SubscribeResponseDto> = runCatching {
         requireAuth()
-        val res = api.renewListing(id)
+        val res = api.renewListing(id, method)
         if (!res.success) throw ApiException(res.error ?: "Gagal memperpanjang")
         res.data ?: throw ApiException("Respon tidak valid")
     }
@@ -85,9 +85,9 @@ class DashboardRepository @Inject constructor(
         res.data ?: throw ApiException("Respon tidak valid")
     }
 
-    suspend fun payLeadPurchase(purchaseId: String): Result<SubscribeResponseDto> = runCatching {
+    suspend fun payLeadPurchase(purchaseId: String, method: String? = null): Result<SubscribeResponseDto> = runCatching {
         requireAuth()
-        val res = api.payLeadPurchase(purchaseId)
+        val res = api.payLeadPurchase(purchaseId, method)
         if (!res.success) throw ApiException(res.error ?: "Gagal memproses pembayaran")
         res.data ?: throw ApiException("Respon tidak valid")
     }
@@ -133,13 +133,21 @@ class DashboardRepository @Inject constructor(
         val message: String? = null,
     )
 
-    suspend fun subscribePlan(planId: String, voucherCode: String? = null): Result<SubscribeOutcome> = runCatching {
+    suspend fun subscribePlan(planId: String, voucherCode: String? = null, method: String? = null): Result<SubscribeOutcome> = runCatching {
         requireAuth()
-        val res = api.subscribePlan(planId, voucherCode)
+        val res = api.subscribePlan(planId, voucherCode, method)
         if (!res.success) throw ApiException(res.error ?: "Gagal berlangganan")
         val data = res.data ?: throw ApiException("Respon tidak valid")
         SubscribeOutcome(data, res.message)
     }
+
+    /** Cek tagihan langganan pending + detail VA/QRIS (resume tagihan native). */
+    suspend fun checkPendingSubscription(): Result<com.lapakhunian.app.core.network.dto.PendingSubscriptionCheckDto> = runCatching {
+        requireAuth()
+        val res = api.checkPendingSubscription()
+        if (!res.success) throw ApiException(res.error ?: "Tidak ada tagihan pending")
+        res.data ?: throw ApiException("Respon tidak valid")
+    }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
 
     suspend fun agentSubscription(): Result<com.lapakhunian.app.core.network.dto.AgentSubscriptionDto?> = runCatching {
         requireAuth()

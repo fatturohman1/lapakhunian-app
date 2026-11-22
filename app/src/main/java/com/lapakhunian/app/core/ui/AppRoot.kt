@@ -454,7 +454,7 @@ fun AppRoot(
                     onBack = { navController.popBackStack() },
                     onOpenWizard = { navController.navigate("listing-wizard") },
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
-                    onRenew = { navController.navigate("payment?listingId=$it") },
+                    onRenew = { navController.navigate("nativepay?listingId=$it") },
                     onEditListing = { navController.navigate("listing-wizard?listingId=$it") },
                 )
             }
@@ -516,15 +516,23 @@ fun AppRoot(
                     onBack = { navController.popBackStack() },
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
                     onOpenPlans = { navController.navigate("agent-plans") },
-                    onPayPurchase = { navController.navigate("payment?purchaseId=$it") },
+                    onPayPurchase = { navController.navigate("nativepay?purchaseId=$it") },
                 )
             }
             composable("agent-plans") {
                 AgentPlansScreen(
                     onBack = { navController.popBackStack() },
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
-                    onPayment = { url, subscriptionId ->
+                    onChoosePlan = { planId, voucher ->
+                        navController.navigate(
+                            "nativepay?planId=${android.net.Uri.encode(planId)}&voucher=${android.net.Uri.encode(voucher)}",
+                        )
+                    },
+                    onResumeSnap = { url, subscriptionId ->
                         navController.navigate("payment?paymentUrl=${android.net.Uri.encode(url)}&subscriptionId=${android.net.Uri.encode(subscriptionId)}")
+                    },
+                    onResumeNative = { subscriptionId ->
+                        navController.navigate("nativepay?resumeSub=${android.net.Uri.encode(subscriptionId)}")
                     },
                 )
             }
@@ -540,6 +548,26 @@ fun AppRoot(
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
                 )
             }
+            // Pembayaran native VA/QRIS (Midtrans Core API) — semua alur app
+            composable(
+                "nativepay?listingId={listingId}&planId={planId}&voucher={voucher}&purchaseId={purchaseId}&resumeSub={resumeSub}",
+                arguments = listOf(
+                    navArgument("listingId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("planId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("voucher") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("purchaseId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("resumeSub") { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) {
+                com.lapakhunian.app.feature.payments.NativePaymentScreen(
+                    onBack = { navController.popBackStack() },
+                    onFallbackPay = { url, extraQuery ->
+                        navController.navigate("payment?paymentUrl=${android.net.Uri.encode(url)}$extraQuery")
+                    },
+                )
+            }
+
+            // Jalur web (Custom Tabs) — fallback kartu/GoPay + resume tagihan Snap lama
             composable(
                 "payment?listingId={listingId}&paymentUrl={paymentUrl}&purchaseId={purchaseId}&subscriptionId={subscriptionId}",
                 arguments = listOf(

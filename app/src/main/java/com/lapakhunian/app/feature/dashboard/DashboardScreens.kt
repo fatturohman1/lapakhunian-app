@@ -1612,12 +1612,17 @@ private fun ContactRow(icon: String, text: String) {
 fun AgentPlansScreen(
     onBack: () -> Unit,
     onGoLogin: () -> Unit,
-    onPayment: (String, String) -> Unit,
+    /** Pilih paket → layar pembayaran native (pilih VA/QRIS di sana). */
+    onChoosePlan: (String, String) -> Unit,
+    /** Lanjut tagihan Snap lama (ada paymentRedirectUrl) → Custom Tabs. */
+    onResumeSnap: (String, String) -> Unit,
+    /** Lanjut tagihan pending native → detail VA/QRIS di app. */
+    onResumeNative: (String) -> Unit,
     viewModel: AgentPlansViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
 
-    // Muat/refresh tiap layar kembali tampil — kartu pending segar setelah kembali dari PaymentScreen
+    // Muat/refresh tiap layar kembali tampil — kartu pending segar setelah kembali dari pembayaran
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -1625,15 +1630,6 @@ fun AgentPlansScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    androidx.compose.runtime.LaunchedEffect(state.paymentUrl) {
-        state.paymentUrl?.let { url ->
-            state.paymentSubscriptionId?.let { subscriptionId ->
-                onPayment(url, subscriptionId)
-                viewModel.clearPaymentUrl()
-            }
-        }
     }
 
     // Aktivasi langsung (paket gratis / diskon menutup seluruh biaya) — tanpa pembayaran
@@ -1747,8 +1743,12 @@ fun AgentPlansScreen(
                             )
                         }
                         Button(
-                            onClick = { viewModel.resumePendingPayment() },
-                            enabled = pending.paymentRedirectUrl != null && !state.cancellingPending,
+                            onClick = {
+                                pending.paymentRedirectUrl?.let { url ->
+                                    onResumeSnap(url, pending.id.orEmpty())
+                                } ?: onResumeNative(pending.id.orEmpty())
+                            },
+                            enabled = !state.cancellingPending,
                             shape = RoundedCornerShape(50),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier
@@ -1851,8 +1851,8 @@ fun AgentPlansScreen(
                             )
                         }
                         Button(
-                            onClick = { viewModel.subscribe(plan.id.orEmpty()) },
-                            enabled = state.subscribingPlanId == null && !state.cancellingPending,
+                            onClick = { onChoosePlan(plan.id.orEmpty(), state.voucherCode) },
+                            enabled = !state.cancellingPending,
                             shape = RoundedCornerShape(50),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier
@@ -1860,14 +1860,14 @@ fun AgentPlansScreen(
                                 .padding(top = 14.dp),
                         ) {
                             Text(
-                                if (state.subscribingPlanId == plan.id) "Memproses…" else if (isCurrent) "Perpanjang ${plan.name}" else "Pilih ${plan.name}",
+                                if (isCurrent) "Perpanjang ${plan.name}" else "Pilih ${plan.name}",
                                 fontWeight = FontWeight.W700,
                             )
                         }
                     }
                 }
                 Text(
-                    "Pembayaran via Midtrans Snap — dibuka di browser lalu status dicek otomatis (M8).",
+                    "VA & QRIS dikonfirmasi langsung di aplikasi — status dicek otomatis. Kartu/GoPay lewat halaman web.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MutedGray,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),

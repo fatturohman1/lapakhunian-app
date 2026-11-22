@@ -2,6 +2,29 @@
 
 Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag Git yang tersedia; bagian **Belum dirilis** berisi perubahan lokal yang belum masuk ke APK rilis.
 
+## 1.0.0-beta.17
+
+### Ditambahkan
+
+- **Pembayaran native VA & QRIS di dalam aplikasi**: memilih paket, memperpanjang
+  iklan, atau membeli leads kini membuka layar "Pilih Cara Bayar" di dalam app —
+  VA BCA/BNI/BRI/Permata atau QRIS. Nomor Virtual Account tampil besar dengan
+  tombol salin, gambar QRIS tampil langsung (bisa discan dari GoPay/OVO/DANA/
+  ShopeePay/m-banking), lengkap dengan batas waktu bayar. Tidak lagi membuka
+  browser; status dicek otomatis tiap 3 detik hingga lunas.
+- **Fallback halaman web tetap tersedia**: tombol sekunder "Bayar via halaman web"
+  untuk kartu kredit / GoPay — dibuka di Custom Tabs seperti sebelumnya.
+- **Tagihan pending bisa dibuka ulang**: kartu "Pembayaran tertunda" di Langganan
+  Agen kini menampilkan kembali nomor VA/QR tagihan yang sama saat dilanjutkan
+  (sebelumnya hanya halaman web). Kartu/GoPay tak tersedia native — kebijakan
+  Midtrans & bank; kedua metode itu lewat halaman web.
+
+### Diubah
+
+- Perbaikan di server (hously): tagihan VA/QRIS dibuat via Midtrans Core API
+  `/v2/charge` dengan batas bayar 24 jam; detail tagihan pending dikembalikan
+  dari status API. Jalur pembayaran web tidak berubah.
+
 ## 1.0.0-beta.16
 
 ### Ditambahkan

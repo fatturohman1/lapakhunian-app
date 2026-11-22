@@ -496,9 +496,6 @@ class AgentPlansViewModel @Inject constructor(
         val pendingSub: com.lapakhunian.app.core.network.dto.AgentSubscriptionDto? = null,
         val cancellingPending: Boolean = false,
         val error: String? = null,
-        val subscribingPlanId: String? = null,
-        val paymentUrl: String? = null,
-        val paymentSubscriptionId: String? = null,
         val voucherCode: String = "",
         val successMessage: String? = null,
     )
@@ -555,48 +552,9 @@ class AgentPlansViewModel @Inject constructor(
         _state.update { it.copy(successMessage = null) }
     }
 
-    fun subscribe(planId: String) {
-        _state.update {
-            it.copy(subscribingPlanId = planId, error = null, successMessage = null, paymentUrl = null, paymentSubscriptionId = null)
-        }
-        viewModelScope.launch {
-            repo.subscribePlan(planId, _state.value.voucherCode.trim().ifBlank { null }).fold(
-                onSuccess = { outcome ->
-                    if (outcome.sub.status == "active") {
-                        // voucher menutup seluruh biaya / paket gratis → langsung aktif, tidak ada pembayaran
-                        _state.update {
-                            it.copy(
-                                subscribingPlanId = null,
-                                successMessage = outcome.message ?: "Berlangganan berhasil — paket sekarang aktif!",
-                                voucherCode = "",
-                            )
-                        }
-                    } else {
-                        val url = outcome.sub.paymentRedirectUrl
-                        val subscriptionId = outcome.sub.subscriptionId
-                        _state.update {
-                            if (url.isNullOrBlank() || subscriptionId.isNullOrBlank()) {
-                                it.copy(subscribingPlanId = null, error = "Data tagihan tidak lengkap. Coba lagi.")
-                            } else {
-                                it.copy(subscribingPlanId = null, paymentUrl = url, paymentSubscriptionId = subscriptionId)
-                            }
-                        }
-                    }
-                },
-                onFailure = { e -> _state.update { it.copy(subscribingPlanId = null, error = e.message) } },
-            )
-        }
-    }
-
-    fun clearPaymentUrl() {
-        _state.update { it.copy(paymentUrl = null, paymentSubscriptionId = null) }
-    }
-
-    /** Lanjutkan pembayaran tagihan pending — buka PaymentScreen dengan URL tersimpan server. */
-    fun resumePendingPayment() {
-        val pending = _state.value.pendingSub ?: return
-        val url = pending.paymentRedirectUrl ?: return
-        _state.update { it.copy(paymentUrl = url, paymentSubscriptionId = pending.id) }
+    /** Voucher dipakai saat memilih paket — dikirim ke layar pembayaran native. */
+    fun consumeVoucher() {
+        _state.update { it.copy(voucherCode = "") }
     }
 
     /** Batalkan tagihan pending — server cancel token Midtrans, lalu muat ulang daftar paket. */

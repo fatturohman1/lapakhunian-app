@@ -252,8 +252,16 @@ class PropertyApi @Inject constructor(
             parameter("limit", limit)
         }.body()
 
-    suspend fun renewListing(id: String): ApiEnvelope<SubscribeResponseDto> =
-        client.post("$baseUrl/api/properties/$id/renew").body()
+    /** method native (va_bca..qris) → charge Core API VA/QRIS; null → jalur Snap (fallback web). */
+    suspend fun renewListing(id: String, method: String? = null): ApiEnvelope<SubscribeResponseDto> =
+        if (method == null) {
+            client.post("$baseUrl/api/properties/$id/renew").body()
+        } else {
+            client.post("$baseUrl/api/properties/$id/renew") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("method" to method))
+            }.body()
+        }
 
     suspend fun requestPasswordReset(email: String): ApiEnvelope<Unit> =
         client.post("$baseUrl/api/user/reset-password") {
@@ -286,14 +294,16 @@ class PropertyApi @Inject constructor(
     suspend fun agentPlans(): ApiEnvelope<List<PlanDto>> =
         client.get("$baseUrl/api/agent/plans").body()
 
-    /** voucherCode opsional — diskon dihitung server (DISCOUNT_PERCENT/FIXED/BONUS_LEADS). */
-    suspend fun subscribePlan(planId: String, voucherCode: String? = null): ApiEnvelope<SubscribeResponseDto> =
+    /** voucherCode opsional — diskon dihitung server (DISCOUNT_PERCENT/FIXED/BONUS_LEADS).
+     *  method opsional (va_bca..qris) → charge Core API VA/QRIS; null → jalur Snap (fallback web). */
+    suspend fun subscribePlan(planId: String, voucherCode: String? = null, method: String? = null): ApiEnvelope<SubscribeResponseDto> =
         client.post("$baseUrl/api/agent/subscribe") {
             contentType(ContentType.Application.Json)
             setBody(
                 buildMap<String, Any?> {
                     put("planId", planId)
                     voucherCode?.takeIf { it.isNotBlank() }?.let { put("voucherCode", it) }
+                    method?.let { put("method", it) }
                 },
             )
         }.body()
@@ -309,8 +319,23 @@ class PropertyApi @Inject constructor(
             setBody(mapOf("packageId" to packageId))
         }.body()
 
-    suspend fun payLeadPurchase(purchaseId: String): ApiEnvelope<SubscribeResponseDto> =
-        client.post("$baseUrl/api/leads/$purchaseId/pay").body()
+    /** method native (va_bca..qris) → charge Core API VA/QRIS; null → jalur Snap (fallback web). */
+    suspend fun payLeadPurchase(purchaseId: String, method: String? = null): ApiEnvelope<SubscribeResponseDto> =
+        if (method == null) {
+            client.post("$baseUrl/api/leads/$purchaseId/pay").body()
+        } else {
+            client.post("$baseUrl/api/leads/$purchaseId/pay") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("method" to method))
+            }.body()
+        }
+
+    /** Cek tagihan langganan pending + detail VA/QRIS (untuk kartu "Pembayaran tertunda"). */
+    suspend fun checkPendingSubscription(): ApiEnvelope<com.lapakhunian.app.core.network.dto.PendingSubscriptionCheckDto> =
+        client.post("$baseUrl/api/agent/subscribe") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("checkOnly" to true))
+        }.body()
 
     // ===== Lead WhatsApp =====
 
