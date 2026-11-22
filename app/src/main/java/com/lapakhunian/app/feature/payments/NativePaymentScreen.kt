@@ -340,6 +340,34 @@ private fun bankLabel(bank: String?): String = when (bank?.lowercase()) {
     else -> bank?.uppercase() ?: "Bank"
 }
 
+/**
+ * Deadline Midtrans ("2026-11-23 17:51:15", WIB) → kalimat ramah:
+ * "besok, 23 Nov 2026 pukul 17:51 WIB" / "hari ini pukul 17:51 WIB".
+ * Tanpa ini user salah baca jam sebagai hari yang sama.
+ */
+private fun formatDeadline(raw: String?): String {
+    if (raw.isNullOrBlank()) return ""
+    val date = raw.take(10)
+    val time = if (raw.length >= 16) raw.drop(11).take(5) else ""
+    return try {
+        val inFmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
+        inFmt.isLenient = false
+        val parsed = inFmt.parse(date) ?: return "$date $time WIB"
+        val cal = java.util.Calendar.getInstance()
+        val today = inFmt.format(cal.time)
+        cal.add(java.util.Calendar.DAY_OF_MONTH, 1)
+        val tomorrow = inFmt.format(cal.time)
+        val nice = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale("id")).format(parsed)
+        when (date) {
+            today -> "hari ini pukul $time WIB"
+            tomorrow -> "besok, $nice pukul $time WIB"
+            else -> "$nice pukul $time WIB"
+        }
+    } catch (_: Exception) {
+        "$date $time WIB"
+    }
+}
+
 @Composable
 fun NativePaymentScreen(
     onBack: () -> Unit,
@@ -579,7 +607,7 @@ private fun BillContent(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
                 PhIcon(AppIcons.Clock, tint = MutedGray, size = 14.dp)
                 Text(
-                    "Bayar sebelum $deadline WIB",
+                    "Bayar sebelum ${formatDeadline(deadline)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MutedGray,
                     modifier = Modifier.padding(start = 6.dp),

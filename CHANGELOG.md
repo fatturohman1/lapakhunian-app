@@ -2,6 +2,23 @@
 
 Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag Git yang tersedia; bagian **Belum dirilis** berisi perubahan lokal yang belum masuk ke APK rilis.
 
+## 1.0.0-beta.20
+
+### Diperbaiki
+
+- **Deadline tagihan tak lagi salah baca**: "Bayar sebelum 2026-11-23 17:51 WIB"
+  kini menjadi "Bayar sebelum besok, 23 Nov 2026 pukul 17:51 WIB" (atau "hari
+  ini") — jam saja sebelumnya membuat user mengira kedaluwarsa di hari yang sama.
+- **Status "AKTIF · sisa 0 hari" selamanya** — akar masalahnya di server: aktivasi
+  langganan tidak pernah mengisi `subscriptionEndDate`, sehingga dashboard
+  menganggap langganan aktif tanpa batas waktu. Sekarang aktivasi (app + webhook)
+  mengisinya, langganan yang lewat `endDate` otomatis ditandai `expired` saat
+  dibaca, dan akun lama yang terlanjur kosong tanggalnya di-backfill dari data
+  langganan. Perubahan di server (hously).
+- Kartu "Paket …" di Dashboard Agen kini mengikuti status sebenarnya:
+  **AKTIF** (hijau) atau **BERAKHIR** (kuning) dengan ajakan perpanjang, dan
+  bisa diketuk untuk langsung ke layar Paket & Langganan.
+
 ## 1.0.0-beta.19
 
 ### Ditambahkan

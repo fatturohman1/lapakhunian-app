@@ -1143,18 +1143,19 @@ fun AgentDashboardScreen(
                         StatBox("${state.unreadChats}", "Chat Blm Dibaca", Modifier.weight(1f))
                     }
 
-                    // Paket aktif + ikon seal-check (sesuai referensi)
+                    // Paket aktif/berakhir + ikon seal-check (sesuai referensi) — ketuk untuk ke Paket & Langganan
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(18.dp))
                             .background(MaterialTheme.colorScheme.surface)
+                            .clickable { onOpenPlans() }
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         PhIcon(
                             AppIcons.Verified,
-                            tint = PrimaryDark,
+                            tint = if (sub?.isActive == true) PrimaryDark else MutedGray,
                             size = 22.dp,
                             modifier = Modifier
                                 .size(40.dp)
@@ -1162,25 +1163,41 @@ fun AgentDashboardScreen(
                         )
                         Column(Modifier.weight(1f).padding(start = 11.dp)) {
                             Text(
-                                "Paket ${sub?.label ?: sub?.tier ?: "-"}${if (sub?.isActive == true) " aktif" else ""}",
+                                "Paket ${sub?.label ?: sub?.tier ?: "-"}" + if (sub?.isActive == true) " aktif" else " berakhir",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.W800,
                             )
                             Text(
-                                if (sub?.daysLeft != null) "Sisa ${sub.daysLeft} hari" else "Status: ${if (sub?.isActive == true) "AKTIF" else "TIDAK AKTIF"}",
+                                when {
+                                    sub?.isActive == true && sub?.daysLeft != null -> "Sisa ${sub.daysLeft} hari — ketuk untuk kelola"
+                                    sub?.isActive == true -> "Status: AKTIF"
+                                    else -> "Masa berlaku habis — ketuk untuk perpanjang"
+                                },
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MutedGray,
                             )
                         }
-                        Text(
-                            if (sub?.isActive == true) "AKTIF" else "NONAKTIF",
-                            color = Color(0xFF15803D),
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.W800,
-                            modifier = Modifier
-                                .background(Color(0xFFDCFCE7), RoundedCornerShape(50))
-                                .padding(horizontal = 10.dp, vertical = 5.dp),
-                        )
+                        if (sub?.isActive == true) {
+                            Text(
+                                "AKTIF",
+                                color = Color(0xFF15803D),
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.W800,
+                                modifier = Modifier
+                                    .background(Color(0xFFDCFCE7), RoundedCornerShape(50))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                            )
+                        } else {
+                            Text(
+                                "BERAKHIR",
+                                color = Color(0xFFB45309),
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.W800,
+                                modifier = Modifier
+                                    .background(Color(0xFFFEF3C7), RoundedCornerShape(50))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                            )
+                        }
                     }
 
                     // Grid menu 8 tile (sesuai referensi qa-grid)
