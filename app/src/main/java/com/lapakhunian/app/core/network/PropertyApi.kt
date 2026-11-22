@@ -273,6 +273,10 @@ class PropertyApi @Inject constructor(
     suspend fun agentSubscription(): ApiEnvelope<com.lapakhunian.app.core.network.dto.AgentSubscriptionDto> =
         client.get("$baseUrl/api/agent/subscribe").body()
 
+    /** Batalkan langganan pending — server cancel token Midtrans + status cancelled. */
+    suspend fun cancelPendingSubscription(): ApiEnvelope<Unit> =
+        client.patch("$baseUrl/api/agent/subscribe").body()
+
     suspend fun agentProfile(): ApiEnvelope<AgentDto> =
         client.get("$baseUrl/api/agent/profile").body()
 

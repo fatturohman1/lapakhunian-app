@@ -148,6 +148,14 @@ class DashboardRepository @Inject constructor(
         res.data
     }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
 
+    /** Batalkan tagihan langganan pending (PATCH /api/agent/subscribe). */
+    suspend fun cancelPendingSubscription(): Result<Unit> = runCatching {
+        requireAuth()
+        val res = api.cancelPendingSubscription()
+        if (!res.success) throw ApiException(res.error ?: "Gagal membatalkan tagihan")
+        Unit
+    }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+
     suspend fun transactions(): Result<List<TransactionDto>> = runCatching {
         requireAuth()
         val res = api.transactions()

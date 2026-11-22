@@ -1617,6 +1617,16 @@ fun AgentPlansScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    // Muat/refresh tiap layar kembali tampil — kartu pending segar setelah kembali dari PaymentScreen
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewModel.retry()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     androidx.compose.runtime.LaunchedEffect(state.paymentUrl) {
         state.paymentUrl?.let { url ->
             state.paymentSubscriptionId?.let { subscriptionId ->
@@ -1635,6 +1645,34 @@ fun AgentPlansScreen(
             confirmButton = {
                 TextButton(onClick = { viewModel.clearSuccessMessage() }) {
                     Text("Oke", color = PrimaryDark, fontWeight = FontWeight.W700)
+                }
+            },
+        )
+    }
+
+    // Konfirmasi batal tagihan pending — server cancel token Midtrans + status cancelled
+    var confirmCancelPending by remember { mutableStateOf(false) }
+    if (confirmCancelPending) {
+        AlertDialog(
+            onDismissRequest = { confirmCancelPending = false },
+            title = { Text("Batalkan tagihan?", fontWeight = FontWeight.W800) },
+            text = {
+                Text("Pembayaran pending akan dibatalkan dan paket belum aktif. Setelah ini kamu bisa langsung memilih paket lain.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmCancelPending = false
+                        viewModel.cancelPendingPayment()
+                    },
+                    enabled = !state.cancellingPending,
+                ) {
+                    Text("Ya, batalkan", color = ErrorRed, fontWeight = FontWeight.W700)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmCancelPending = false }) {
+                    Text("Batal", color = MutedGray)
                 }
             },
         )
@@ -1663,6 +1701,72 @@ fun AgentPlansScreen(
             else -> {
                 state.error?.let {
                     Text(it, color = ErrorRed, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(20.dp))
+                }
+
+                // Kartu tagihan pending — server menolak paket baru ("Tunggu pembayaran
+                // langganan sebelumnya selesai") sampai tagihan ini selesai/dibatalkan
+                state.pendingSub?.let { pending ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(TintGreen)
+                            .padding(18.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            PhIcon(AppIcons.Sell, tint = Green, size = 18.dp)
+                            Text(
+                                "Pembayaran tertunda",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.W800,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                        Text(
+                            buildString {
+                                append(pending.plan?.name ?: "Paket")
+                                pending.plan?.price?.let { append(" · " + formatRupiah(it)) }
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.W700,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                        Text(
+                            "Selesaikan atau batalkan tagihan ini dulu untuk memilih paket lain.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MutedGray,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                        pending.createdAt?.takeIf { it.length >= 10 }?.let { created ->
+                            Text(
+                                "Tagihan dibuat ${created.take(10)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MutedGray,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
+                        Button(
+                            onClick = { viewModel.resumePendingPayment() },
+                            enabled = pending.paymentRedirectUrl != null && !state.cancellingPending,
+                            shape = RoundedCornerShape(50),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp),
+                        ) { Text("Lanjutkan Bayar", fontWeight = FontWeight.W700) }
+                        TextButton(
+                            onClick = { confirmCancelPending = true },
+                            enabled = !state.cancellingPending,
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                        ) {
+                            Text(
+                                if (state.cancellingPending) "Membatalkan…" else "Batalkan tagihan",
+                                color = ErrorRed,
+                                fontWeight = FontWeight.W700,
+                            )
+                        }
+                    }
                 }
 
                 // Intro (sesuai referensi)
@@ -1748,7 +1852,7 @@ fun AgentPlansScreen(
                         }
                         Button(
                             onClick = { viewModel.subscribe(plan.id.orEmpty()) },
-                            enabled = state.subscribingPlanId == null,
+                            enabled = state.subscribingPlanId == null && !state.cancellingPending,
                             shape = RoundedCornerShape(50),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier

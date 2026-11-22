@@ -300,10 +300,14 @@ data class SubscribeResponseDto(
     val subscriptionId: String? = null,
 )
 
+/** Respons GET /api/agent/subscribe — pending dipakai untuk kartu "Pembayaran tertunda". */
 @Serializable
 data class AgentSubscriptionDto(
     val id: String? = null,
     val status: String? = null,
+    val createdAt: String? = null,
+    val paymentRedirectUrl: String? = null,
+    val plan: PlanDto? = null,
 )
 
 @Serializable

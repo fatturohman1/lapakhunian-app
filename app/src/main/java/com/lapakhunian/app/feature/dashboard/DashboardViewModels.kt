@@ -492,6 +492,9 @@ class AgentPlansViewModel @Inject constructor(
         val needsLogin: Boolean = false,
         val plans: List<PlanDto> = emptyList(),
         val subscription: com.lapakhunian.app.core.network.dto.SubscriptionDto? = null,
+        /** Tagihan langganan pending dari server — tampil sebagai kartu "Pembayaran tertunda". */
+        val pendingSub: com.lapakhunian.app.core.network.dto.AgentSubscriptionDto? = null,
+        val cancellingPending: Boolean = false,
         val error: String? = null,
         val subscribingPlanId: String? = null,
         val paymentUrl: String? = null,
@@ -503,7 +506,8 @@ class AgentPlansViewModel @Inject constructor(
     private val _state = MutableStateFlow(PlansUiState())
     val state: StateFlow<PlansUiState> = _state.asStateFlow()
 
-    init { viewModelScope.launch { load() } }
+    // Tidak load di init — layar memuat via ON_RESUME (agar kartu pending segar
+    // setelah kembali dari PaymentScreen)
 
     suspend fun load() {
         if (session.token() == null) {
@@ -513,12 +517,29 @@ class AgentPlansViewModel @Inject constructor(
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             val subDeferred = async { repo.subscription().getOrNull() }
+            val pendingDeferred = async {
+                repo.agentSubscription().getOrNull()?.takeIf { it.status == "pending" }
+            }
             repo.agentPlans().fold(
                 onSuccess = { plans ->
-                    _state.update { it.copy(loading = false, plans = plans, subscription = subDeferred.await()) }
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            plans = plans,
+                            subscription = subDeferred.await(),
+                            pendingSub = pendingDeferred.await(),
+                        )
+                    }
                 },
                 onFailure = { e ->
-                    _state.update { it.copy(loading = false, error = e.message, subscription = subDeferred.await()) }
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            error = e.message,
+                            subscription = subDeferred.await(),
+                            pendingSub = pendingDeferred.await(),
+                        )
+                    }
                 },
             )
         }
@@ -569,6 +590,30 @@ class AgentPlansViewModel @Inject constructor(
 
     fun clearPaymentUrl() {
         _state.update { it.copy(paymentUrl = null, paymentSubscriptionId = null) }
+    }
+
+    /** Lanjutkan pembayaran tagihan pending — buka PaymentScreen dengan URL tersimpan server. */
+    fun resumePendingPayment() {
+        val pending = _state.value.pendingSub ?: return
+        val url = pending.paymentRedirectUrl ?: return
+        _state.update { it.copy(paymentUrl = url, paymentSubscriptionId = pending.id) }
+    }
+
+    /** Batalkan tagihan pending — server cancel token Midtrans, lalu muat ulang daftar paket. */
+    fun cancelPendingPayment() {
+        if (_state.value.cancellingPending) return
+        _state.update { it.copy(cancellingPending = true, error = null) }
+        viewModelScope.launch {
+            repo.cancelPendingSubscription().fold(
+                onSuccess = {
+                    _state.update { it.copy(cancellingPending = false, successMessage = "Tagihan dibatalkan — silakan pilih paket.") }
+                    load()
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(cancellingPending = false, error = e.message ?: "Gagal membatalkan tagihan") }
+                },
+            )
+        }
     }
 }
 
