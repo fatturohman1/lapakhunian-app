@@ -573,13 +573,26 @@ private fun BillContent(
             }
         }
 
-        Text(
-            "Status dicek otomatis setiap 3 detik — pembayaran terkonfirmasi, paket langsung aktif.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MutedGray,
-            textAlign = TextAlign.Center,
+        // Penanda halaman hidup: spinner + teks berarti polling status sedang berjalan
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(top = 16.dp),
-        )
+        ) {
+            if (error == null) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(12.dp),
+                    strokeWidth = 2.dp,
+                    color = MutedGray,
+                )
+                Spacer(Modifier.size(8.dp))
+            }
+            Text(
+                "Status dicek otomatis setiap 3 detik — pembayaran terkonfirmasi, paket langsung aktif.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MutedGray,
+                textAlign = TextAlign.Center,
+            )
+        }
 
         error?.let {
             Text(

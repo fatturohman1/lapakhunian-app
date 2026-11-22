@@ -2,6 +2,22 @@
 
 Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag Git yang tersedia; bagian **Belum dirilis** berisi perubahan lokal yang belum masuk ke APK rilis.
 
+## 1.0.0-beta.18
+
+### Diperbaiki
+
+- Jumlah tagihan (Rp) kini tampil di layar "Tagihan Pembayaran" — sebelumnya hilang
+  karena Midtrans mengirim `gross_amount` berbentuk string ("150000.00") dan parser
+  hanya menerima angka. Perbaikan parsingnya di server (hously).
+- Layar **Leads** dan **Dashboard Saya** (agen) kini segar otomatis begitu kembali
+  dari pembayaran — status pembelian leads dan saldo tidak perlu close & buka app lagi.
+
+### Ditambahkan
+
+- Penanda polling di layar tagihan: spinner kecil berdampingan dengan teks
+  "Status dicek otomatis setiap 3 detik" — terlihat jelas bahwa pemeriksaan
+  status sedang berjalan, berhenti saat lunas/timeout.
+
 ## 1.0.0-beta.17
 
 ### Ditambahkan
