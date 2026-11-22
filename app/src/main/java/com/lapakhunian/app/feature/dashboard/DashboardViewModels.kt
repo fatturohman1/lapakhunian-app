@@ -441,31 +441,6 @@ class AgentLeadsViewModel @Inject constructor(
 
     fun retry() { viewModelScope.launch { load() } }
 
-    /** Beli paket lead: buat purchase pending lalu minta URL bayar, buka PaymentScreen. */
-    fun purchaseLeadPackage(packageId: String, onPay: (String) -> Unit) {
-        _state.update { it.copy(purchasing = true, error = null) }
-        viewModelScope.launch {
-            repo.purchaseLeadPackage(packageId).fold(
-                onSuccess = { purchase ->
-                    val id = purchase.id
-                    if (id == null) {
-                        _state.update { it.copy(purchasing = false, error = "Respon tidak valid") }
-                    } else {
-                        repo.payLeadPurchase(id).fold(
-                            onSuccess = {
-                                _state.update { it.copy(purchasing = false) }
-                                load()
-                                onPay(id)
-                            },
-                            onFailure = { e -> _state.update { it.copy(purchasing = false, error = e.message) } },
-                        )
-                    }
-                },
-                onFailure = { e -> _state.update { it.copy(purchasing = false, error = e.message) } },
-            )
-        }
-    }
-
     /** Purchase pending: minta ulang URL pembayaran (idempotent di server). */
     fun payPendingPurchase(purchaseId: String, onPay: (String) -> Unit) {
         _state.update { it.copy(purchasing = true, error = null) }
@@ -491,10 +466,13 @@ class AgentPlansViewModel @Inject constructor(
         val loading: Boolean = true,
         val needsLogin: Boolean = false,
         val plans: List<PlanDto> = emptyList(),
+        /** Paket top-up leads (tab "Top-up Leads") — sumber data sama dengan layar Leads. */
+        val packages: List<com.lapakhunian.app.core.network.dto.LeadPackageDto> = emptyList(),
         val subscription: com.lapakhunian.app.core.network.dto.SubscriptionDto? = null,
         /** Tagihan langganan pending dari server — tampil sebagai kartu "Pembayaran tertunda". */
         val pendingSub: com.lapakhunian.app.core.network.dto.AgentSubscriptionDto? = null,
         val cancellingPending: Boolean = false,
+        val buyingPackageId: String? = null,
         val error: String? = null,
         val voucherCode: String = "",
         val successMessage: String? = null,
@@ -517,12 +495,14 @@ class AgentPlansViewModel @Inject constructor(
             val pendingDeferred = async {
                 repo.agentSubscription().getOrNull()?.takeIf { it.status == "pending" }
             }
+            val leadsDeferred = async { repo.agentLeads().getOrNull() }
             repo.agentPlans().fold(
                 onSuccess = { plans ->
                     _state.update {
                         it.copy(
                             loading = false,
                             plans = plans,
+                            packages = leadsDeferred.await()?.packages.orEmpty(),
                             subscription = subDeferred.await(),
                             pendingSub = pendingDeferred.await(),
                         )
@@ -533,6 +513,7 @@ class AgentPlansViewModel @Inject constructor(
                         it.copy(
                             loading = false,
                             error = e.message,
+                            packages = leadsDeferred.await()?.packages.orEmpty(),
                             subscription = subDeferred.await(),
                             pendingSub = pendingDeferred.await(),
                         )
@@ -555,6 +536,28 @@ class AgentPlansViewModel @Inject constructor(
     /** Voucher dipakai saat memilih paket — dikirim ke layar pembayaran native. */
     fun consumeVoucher() {
         _state.update { it.copy(voucherCode = "") }
+    }
+
+    /** Tab Top-up Leads: buat purchase pending lalu buka layar pembayaran native. */
+    fun purchaseLeadPackage(packageId: String, onPay: (String) -> Unit) {
+        if (_state.value.buyingPackageId != null) return
+        _state.update { it.copy(buyingPackageId = packageId, error = null) }
+        viewModelScope.launch {
+            repo.purchaseLeadPackage(packageId).fold(
+                onSuccess = { purchase ->
+                    _state.update { it.copy(buyingPackageId = null) }
+                    val purchaseId = purchase.id
+                    if (purchaseId == null) {
+                        _state.update { it.copy(error = "Respon tidak valid") }
+                    } else {
+                        onPay(purchaseId)
+                    }
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(buyingPackageId = null, error = e.message ?: "Gagal membeli paket lead") }
+                },
+            )
+        }
     }
 
     /** Batalkan tagihan pending — server cancel token Midtrans, lalu muat ulang daftar paket. */

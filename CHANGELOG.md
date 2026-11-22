@@ -2,6 +2,26 @@
 
 Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag Git yang tersedia; bagian **Belum dirilis** berisi perubahan lokal yang belum masuk ke APK rilis.
 
+## 1.0.0-beta.19
+
+### Ditambahkan
+
+- **Layar "Paket & Langganan" dengan dua tab**: Langganan (slot properti + leads
+  tiap bulan + chat unlimited) dan Top-up Leads (leads saja, sekali beli) kini
+  dalam satu layar berdampingan — tak lagi membingungkan paket langganan dengan
+  top-up lead. Layar Leads tinggal menautkan ke tab Top-up Leads.
+- **Kartu "Langganan Aktif"** di atas daftar paket: nama paket, sisa hari, dan
+  pemakaian slot properti — status ringkas tanpa membuka dashboard.
+
+### Diperbaiki
+
+- **Pesan error tidak lagi hilang** di layar "Pilih Cara Bayar": kegagalan server
+  (mis. langganan masih aktif) kini tampil merah di atas daftar metode —
+  sebelumnya terlihat seperti semua tombol mati tanpa penjelasan.
+- Tombol paket yang sedang aktif kini nonaktif berlabel "Paket Aktif — sisa X
+  hari" (server memang menolak perpanjangan sebelum masa berlaku habis), bukan
+  tombol yang selalu gagal diam-diam.
+
 ## 1.0.0-beta.18
 
 ### Diperbaiki

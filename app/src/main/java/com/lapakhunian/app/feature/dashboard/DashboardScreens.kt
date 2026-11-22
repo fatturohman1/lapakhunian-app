@@ -1318,6 +1318,8 @@ fun AgentLeadsScreen(
     onBack: () -> Unit,
     onGoLogin: () -> Unit,
     onOpenPlans: () -> Unit,
+    /** Beli paket lead → layar Paket & Langganan tab Top-up Leads. */
+    onOpenPackages: () -> Unit,
     onPayPurchase: (String) -> Unit,
     viewModel: AgentLeadsViewModel = hiltViewModel(),
 ) {
@@ -1416,34 +1418,25 @@ fun AgentLeadsScreen(
                         )
                     }
 
-                    Text("Paket Lead", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W800)
-                    data?.packages?.forEach { pkg ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surface)
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(pkg.name ?: "Paket", fontWeight = FontWeight.W800)
-                                Text("${pkg.amount ?: 0} leads", style = MaterialTheme.typography.labelMedium, color = MutedGray)
-                                Text(
-                                    formatRupiah(pkg.price ?: 0),
-                                    color = PrimaryDark,
-                                    fontWeight = FontWeight.W800,
-                                    modifier = Modifier.padding(top = 2.dp),
-                                )
-                            }
-                            MiniAction(
-                                "Beli",
-                                TintGreen,
-                                PrimaryDark,
-                                enabled = !state.purchasing,
-                                onClick = { viewModel.purchaseLeadPackage(pkg.id.orEmpty(), onPay = onPayPurchase) },
+                    // Top-up leads pindah ke layar "Paket & Langganan" (tab Top-up Leads)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(TintGreen)
+                            .clickable { onOpenPackages() }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Beli Paket Lead", fontWeight = FontWeight.W800)
+                            Text(
+                                "Top-up leads — sekali beli, bayar VA/QRIS di app.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MutedGray,
                             )
                         }
+                        PhIcon(AppIcons.Wallet, tint = Green, size = 20.dp)
                     }
 
                     if ((data?.pendingCount ?: 0) > 0) {
@@ -1638,9 +1631,15 @@ fun AgentPlansScreen(
     onResumeSnap: (String, String) -> Unit,
     /** Lanjut tagihan pending native → detail VA/QRIS di app. */
     onResumeNative: (String) -> Unit,
+    /** Tab Top-up Leads: buat purchase pending lalu buka layar pembayaran native. */
+    onBuyPackage: (String) -> Unit,
+    startOnLeadsTab: Boolean = false,
     viewModel: AgentPlansViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+
+    // Tab aktif — Leads screen membuka langsung tab Top-up Leads
+    var selectedTab by remember { mutableStateOf(if (startOnLeadsTab) 1 else 0) }
 
     // Muat/refresh tiap layar kembali tampil — kartu pending segar setelah kembali dari pembayaran
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
@@ -1699,7 +1698,7 @@ fun AgentPlansScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        DashTopBar("Langganan Agen", onBack)
+        DashTopBar("Paket & Langganan", onBack)
         when {
             state.needsLogin -> NeedsLogin(onGoLogin)
             state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Memuat…", color = MutedGray) }
@@ -1715,6 +1714,80 @@ fun AgentPlansScreen(
                 icon = AppIcons.Crown,
             )
             else -> {
+                // Tab: Langganan (properti + leads bulanan) | Top-up Leads (leads saja)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                ) {
+                    com.lapakhunian.app.core.designsystem.components.FilterChip(
+                        label = "Langganan",
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        modifier = Modifier.weight(1f),
+                    )
+                    com.lapakhunian.app.core.designsystem.components.FilterChip(
+                        label = "Top-up Leads",
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                if (selectedTab != 0) {
+                    // ===== TAB TOP-UP LEADS — leads saja, sekali beli =====
+                    state.error?.let {
+                        Text(it, color = ErrorRed, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 20.dp))
+                    }
+                    Text(
+                        "Top-up leads saja — sekali beli, slot properti tidak ikut. Untuk slot properti + leads tiap bulan, pakai tab Langganan.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MutedGray,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    )
+                    state.packages.forEach { pkg ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 6.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(pkg.name ?: "Paket", fontWeight = FontWeight.W800)
+                                Text(
+                                    "${pkg.amount ?: 0} leads · LEADS SAJA",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MutedGray,
+                                )
+                                Text(
+                                    formatRupiah(pkg.price ?: 0),
+                                    color = PrimaryDark,
+                                    fontWeight = FontWeight.W800,
+                                    modifier = Modifier.padding(top = 2.dp),
+                                )
+                            }
+                            MiniAction(
+                                if (state.buyingPackageId == pkg.id) "Memproses…" else "Beli",
+                                TintGreen,
+                                PrimaryDark,
+                                onClick = { viewModel.purchaseLeadPackage(pkg.id.orEmpty(), onBuyPackage) },
+                                enabled = state.buyingPackageId == null,
+                            )
+                        }
+                    }
+                    if (state.packages.isEmpty()) {
+                        Text(
+                            "Paket lead belum tersedia.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MutedGray,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                } else {
                 state.error?.let {
                     Text(it, color = ErrorRed, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(20.dp))
                 }
@@ -1789,6 +1862,42 @@ fun AgentPlansScreen(
                     }
                 }
 
+                // Kartu langganan aktif — status ringkas di atas, bukan cuma chip PAKETMU
+                state.subscription?.takeIf { it.isActive == true }?.let { sub ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(TintGreen)
+                            .padding(18.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            PhIcon(AppIcons.Crown, tint = Green, size = 18.dp)
+                            Text(
+                                "Langganan Aktif",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.W800,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                        Text(
+                            (sub.label ?: sub.tier ?: "Paket") + " — sisa ${sub.daysLeft ?: 0} hari",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.W700,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                        sub.maxProperties?.let { maxSlots ->
+                            Text(
+                                "${sub.currentProperties ?: 0}/$maxSlots properti terpakai",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MutedGray,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
+                    }
+                }
+
                 // Intro (sesuai referensi)
                 Text(
                     "Paket menentukan slot iklan, leads tiap bulan, dan chat unlimited. Bisa upgrade kapan saja.",
@@ -1830,6 +1939,8 @@ fun AgentPlansScreen(
                     val isCurrent = state.subscription?.let { sub ->
                         sub.label.equals(plan.name, ignoreCase = true) || sub.tier.equals(plan.name, ignoreCase = true)
                     } == true
+                    // Langganan aktif diblokir server ("Tunggu hingga habis") — tombol mati + status, bukan jalan buntu
+                    val isActivePlan = isCurrent && state.subscription?.isActive == true
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1853,6 +1964,17 @@ fun AgentPlansScreen(
                                         .padding(horizontal = 8.dp, vertical = 3.dp),
                                 )
                             }
+                            // Penanda kategori — beda dengan "Paket Lead" (leads saja)
+                            Text(
+                                "PROPERTI + LEADS",
+                                color = Color.White,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.W800,
+                                modifier = Modifier
+                                    .padding(start = 6.dp)
+                                    .background(PrimaryDark, RoundedCornerShape(50))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                            )
                         }
                         Text(
                             formatRupiah(plan.price ?: 0) + " /${plan.durationDays ?: 30} hari",
@@ -1872,7 +1994,7 @@ fun AgentPlansScreen(
                         }
                         Button(
                             onClick = { onChoosePlan(plan.id.orEmpty(), state.voucherCode) },
-                            enabled = !state.cancellingPending,
+                            enabled = !state.cancellingPending && !isActivePlan,
                             shape = RoundedCornerShape(50),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier
@@ -1880,7 +2002,11 @@ fun AgentPlansScreen(
                                 .padding(top = 14.dp),
                         ) {
                             Text(
-                                if (isCurrent) "Perpanjang ${plan.name}" else "Pilih ${plan.name}",
+                                when {
+                                    isActivePlan -> "Paket Aktif" + (state.subscription?.daysLeft?.let { " — sisa $it hari" } ?: "")
+                                    isCurrent -> "Perpanjang ${plan.name}"
+                                    else -> "Pilih ${plan.name}"
+                                },
                                 fontWeight = FontWeight.W700,
                             )
                         }
@@ -1893,6 +2019,7 @@ fun AgentPlansScreen(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                 )
                 Spacer(Modifier.height(16.dp))
+                }
             }
         }
     }

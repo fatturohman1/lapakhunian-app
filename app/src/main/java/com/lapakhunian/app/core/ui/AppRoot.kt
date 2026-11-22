@@ -516,13 +516,20 @@ fun AppRoot(
                     onBack = { navController.popBackStack() },
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
                     onOpenPlans = { navController.navigate("agent-plans") },
+                    onOpenPackages = { navController.navigate("agent-plans?tab=leads") },
                     onPayPurchase = { navController.navigate("nativepay?purchaseId=$it") },
                 )
             }
-            composable("agent-plans") {
+            composable(
+                "agent-plans?tab={tab}",
+                arguments = listOf(
+                    navArgument("tab") { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) { entry ->
                 AgentPlansScreen(
                     onBack = { navController.popBackStack() },
                     onGoLogin = { navController.navigate(Routes.LOGIN) },
+                    startOnLeadsTab = entry.arguments?.getString("tab") == "leads",
                     onChoosePlan = { planId, voucher ->
                         navController.navigate(
                             "nativepay?planId=${android.net.Uri.encode(planId)}&voucher=${android.net.Uri.encode(voucher)}",
@@ -534,6 +541,7 @@ fun AppRoot(
                     onResumeNative = { subscriptionId ->
                         navController.navigate("nativepay?resumeSub=${android.net.Uri.encode(subscriptionId)}")
                     },
+                    onBuyPackage = { navController.navigate("nativepay?purchaseId=$it") },
                 )
             }
             composable("lead-wa") {

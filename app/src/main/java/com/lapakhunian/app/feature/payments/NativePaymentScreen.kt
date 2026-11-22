@@ -403,6 +403,7 @@ fun NativePaymentScreen(
             ) { CircularProgressIndicator() }
             state.stage == Stage.METHOD -> MethodPickerContent(
                 preparing = state.preparing,
+                error = state.error,
                 onPick = viewModel::pickMethod,
                 onPayViaWeb = viewModel::payViaWeb,
             )
@@ -457,6 +458,7 @@ private fun PaidContent() {
 @Composable
 private fun MethodPickerContent(
     preparing: Boolean,
+    error: String?,
     onPick: (String) -> Unit,
     onPayViaWeb: () -> Unit,
 ) {
@@ -467,6 +469,18 @@ private fun MethodPickerContent(
             color = MutedGray,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp),
         )
+        // Jangan diam-diam: kegagalan server (mis. langganan masih aktif) harus terlihat
+        error?.let {
+            Text(
+                it,
+                color = ErrorRed,
+                style = MaterialTheme.typography.labelMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+            )
+        }
         METHOD_OPTIONS.forEach { option ->
             Row(
                 modifier = Modifier

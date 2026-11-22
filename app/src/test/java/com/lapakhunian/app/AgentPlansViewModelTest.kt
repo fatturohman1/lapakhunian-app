@@ -3,6 +3,7 @@ package com.lapakhunian.app
 import androidx.lifecycle.ViewModelStore
 import com.lapakhunian.app.core.data.repository.DashboardRepository
 import com.lapakhunian.app.core.data.session.SessionManager
+import com.lapakhunian.app.core.network.dto.AgentLeadsDto
 import com.lapakhunian.app.core.network.dto.AgentSubscriptionDto
 import com.lapakhunian.app.core.network.dto.SubscriptionDto
 import com.lapakhunian.app.feature.dashboard.AgentPlansViewModel
@@ -38,6 +39,7 @@ class AgentPlansViewModelTest {
         coEvery { session.token() } returns "test-session"
         coEvery { repo.subscription() } returns Result.success(SubscriptionDto(isActive = true))
         coEvery { repo.agentPlans() } returns Result.success(emptyList())
+        coEvery { repo.agentLeads() } returns Result.success(AgentLeadsDto())
         coEvery { repo.agentSubscription() } returns Result.success(null)
     }
 
