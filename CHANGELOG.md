@@ -2,7 +2,27 @@
 
 Catatan perubahan aplikasi Android, bukan website. Riwayat versi mengikuti tag Git yang tersedia; bagian **Belum dirilis** berisi perubahan lokal yang belum masuk ke APK rilis.
 
-## Belum dirilis
+## 1.0.0-beta.16
+
+### Ditambahkan
+
+- **Kartu "Pembayaran tertunda" di Langganan Agen**: tagihan langganan pending kini
+  tampil di atas daftar paket berisi nama paket, harga, dan tanggal tagihan dibuat,
+  dengan tombol **Lanjutkan Bayar** (membuka kembali halaman Midtrans Snap yang
+  tersimpan di server) dan **Batalkan tagihan** (dengan dialog konfirmasi — server
+  membatalkan token Midtrans dan melepas blokir, sehingga paket lain langsung bisa
+  dipilih). Layar otomatis menyegarkan status begitu kembali dari halaman pembayaran.
+- Batas bayar tagihan (langganan, pembelian leads, perpanjang iklan) kini eksplisit
+  24 jam di Midtrans Snap — lewat itu Midtrans mengirim webhook expire dan tagihan
+  lepas sendiri tanpa mengunci paket lain. (Perubahan ini di sisi server hously.)
+
+### Diperbaiki
+
+- Pembelian leads yang gagal diverifikasi statusnya (dulu menampilkan error mentah
+  "Status: undefined") kini bisa langsung dicoba ulang: tagihan lama dianggap tidak
+  valid dan tagihan baru dibuat otomatis. Perbaikan di server hously.
+
+## 1.0.0-beta.15
 
 ### Diubah
 
